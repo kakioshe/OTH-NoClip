@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RestoreSources></RestoreSources>
+    <SupportDir Condition="'$(SupportDir)' == ''">$(MSBuildProjectDirectory)\..\support</SupportDir>
+    <DotNet6RuntimeDir Condition="'$(DotNet6RuntimeDir)' == ''">C:\Program Files\dotnet\shared\Microsoft.NETCore.App\6.0.36</DotNet6RuntimeDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(DotNet6RuntimeDir)\*.dll" />
+    <Reference Include="$(SupportDir)\interop\*.dll" />
+    <Reference Include="$(SupportDir)\BepInEx-Setup\BepInEx\core\*.dll" />
+  </ItemGroup>
+</Project>
+
