@@ -6,8 +6,11 @@
     <Nullable>disable</Nullable>
     <RestoreSources></RestoreSources>
     <SupportDir Condition="'$(SupportDir)' == ''">$(MSBuildProjectDirectory)\..\support</SupportDir>
-    <DotNet6RuntimeDir Condition="'$(DotNet6RuntimeDir)' == ''">C:\Program Files\dotnet\shared\Microsoft.NETCore.App\6.0.36</DotNet6RuntimeDir>
   </PropertyGroup>
+  <Target Name="ValidateBuildDependencies" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(DotNet6RuntimeDir)' == '' Or !Exists('$(DotNet6RuntimeDir)\System.Private.CoreLib.dll')" Text="Set DotNet6RuntimeDir to your installed Microsoft.NETCore.App 6.0.x runtime directory. See README.md." />
+    <Error Condition="!Exists('$(SupportDir)\interop\Assembly-CSharp.dll') Or !Exists('$(SupportDir)\BepInEx-Setup\BepInEx\core\BepInEx.Core.dll')" Text="Set SupportDir to a support folder containing the game interop and BepInEx core assemblies. See README.md." />
+  </Target>
   <ItemGroup>
     <Reference Include="$(DotNet6RuntimeDir)\*.dll" />
     <Reference Include="$(SupportDir)\interop\*.dll" />
