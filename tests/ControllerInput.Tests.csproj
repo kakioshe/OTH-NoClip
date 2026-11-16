@@ -5,6 +5,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\ControllerInput.cs" Link="ControllerInput.cs" />
+    <Compile Include="..\src\ControllerInput.cs" Link="ControllerInput.cs" />
   </ItemGroup>
 </Project>

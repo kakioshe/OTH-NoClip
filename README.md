@@ -40,6 +40,8 @@ The first connected XInput controller is used. Stick and trigger movement is pro
 
 You can build the DLL yourself on Windows after downloading the source ZIP from GitHub and extracting it. The source does not include the game-generated assemblies or BepInEx dependencies.
 
+The plugin code is in `src/`, its project file is in the repository root, and the independent controller input checks are in `tests/`.
+
 1. Install the **.NET 10 SDK** and the **.NET 6 runtime**. In PowerShell, run `dotnet --list-sdks` and `dotnet --list-runtimes` to check that both are installed. Note the directory of the installed `Microsoft.NETCore.App` 6.0.x runtime.
 2. Install BepInEx 6 IL2CPP for Windows x64 in the game folder, launch the game once, and close it. This generates the `BepInEx\interop` folder. The development setup used BepInEx build 788.
 3. Create a separate support folder with the following layout. Copy `interop` and `core` from the game's `BepInEx` folder; keep their DLLs intact:
