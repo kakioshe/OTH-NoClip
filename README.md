@@ -15,8 +15,8 @@ This is a prototype. The controller controls and activation while moving need fu
 ## Installation
 
 1. Close the game.
-2. Download the DLL from the latest GitHub release. Older releases use the name `OTH-NoClip.dll`; builds of the renamed project use `oth-trainer.dll`.
-3. Remove any older `OTH-NoClip.dll` or `oth-trainer.dll` from the game's `BepInEx/plugins` folder, then copy in the downloaded DLL. Keep only one version installed.
+2. Download the installation ZIP from the latest GitHub release.
+3. Remove any older `OTH-NoClip.dll` or `oth-trainer.dll` from the game's `BepInEx/plugins` folder. Extract the ZIP, then copy its `BepInEx` folder into the game directory and merge the folders. Keep only one version installed.
 4. Launch the game and enter a single-player session with a vehicle.
 
 To uninstall, close the game and remove the installed trainer DLL from `BepInEx/plugins`.
@@ -75,3 +75,4 @@ Run `dotnet run --project tests/ControllerInput.Tests.csproj` with the .NET 10 S
 GitHub Actions runs the same checks on pushes and pull requests as the `Unit tests` job. It reports line and branch coverage for `ControllerInput.cs` in the job summary; this is not coverage of the whole plugin. Coverage uses the free Coverlet tool and has no percentage threshold. The plugin build requires game-generated dependencies and is not included in this automated check.
 
 These checks do not exercise XInput, Unity, Fusion, flight activation, collision restoration, or gameplay. Those require integration or in-game testing; continue to test activation while moving, controller input, and safe toggle-off in a single-player session.
+
