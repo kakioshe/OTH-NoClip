@@ -5,7 +5,7 @@ using BepInEx;
 using BepInEx.Unity.IL2CPP;
 using UnityEngine;
 
-[BepInPlugin("local.oth.noclip", "OTH NoClip", "0.5.0")]
+[BepInPlugin("local.oth.noclip", "oth-trainer", "0.5.0")]
 public class Plugin : BasePlugin
 {
     internal static BepInEx.Logging.ManualLogSource Logger;
@@ -46,7 +46,7 @@ public class Flight : MonoBehaviour
             var runner = OverlandNetworkRunner.Instance;
             if (active && !IsCurrentLocalVehicle()) Stop();
             if (toggle && !lastToggle) { if (active) Stop(); else StartFlight(runner); }
-        } catch (Exception e) { Debug.LogError("OTH NoClip: " + e); Stop(); }
+        } catch (Exception e) { Debug.LogError("oth-trainer: " + e); Stop(); }
         lastToggle = toggle;
     }
     void LateUpdate()
@@ -76,15 +76,15 @@ public class Flight : MonoBehaviour
                 body.rotation = flightRotation;
                 body.position = requested;
             }
-        } catch (Exception e) { Debug.LogError("OTH NoClip: " + e); Stop(); }
+        } catch (Exception e) { Debug.LogError("oth-trainer: " + e); Stop(); }
     }
     void StartFlight(OverlandNetworkRunner runner)
     {
-        if (runner == null || !runner.IsSinglePlayer || !OverlandNetworkRunner.IsLocalPlayerSpawned || runner.LocalPlayerNetworkObject == null) { Debug.LogWarning("OTH NoClip: single-player vehicle unavailable."); return; }
+        if (runner == null || !runner.IsSinglePlayer || !OverlandNetworkRunner.IsLocalPlayerSpawned || runner.LocalPlayerNetworkObject == null) { Debug.LogWarning("oth-trainer: single-player vehicle unavailable."); return; }
         var player = runner.LocalPlayerNetworkObject.GetComponent<FusionPlayer>();
         vehicle = player != null ? player.vehicleBase : null;
         body = vehicle != null ? vehicle.cachedRigidbody : null;
-        if (body == null) { Debug.LogWarning("OTH NoClip: local vehicle not found."); return; }
+        if (body == null) { Debug.LogWarning("oth-trainer: local vehicle not found."); return; }
         gravity = body.useGravity; kinematic = body.isKinematic;
         colliders.Clear();
         foreach (var c in body.GetComponentsInChildren<Collider>(true)) { if (c != null) colliders.Add((c, c.enabled)); }
