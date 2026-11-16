@@ -2,4 +2,8 @@ bin/
 obj/
 .vs/
 *.user
+.tools/
+coverage.json
+__pycache__/
+
 

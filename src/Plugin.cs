@@ -1,0 +1,132 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using BepInEx;
+using BepInEx.Unity.IL2CPP;
+using UnityEngine;
+
+[BepInPlugin("local.oth.noclip", "OTH NoClip", "0.5.0")]
+public class Plugin : BasePlugin
+{
+    internal static BepInEx.Logging.ManualLogSource Logger;
+    public override void Load() { Logger = Log; PoseSuppression.Install(); AddComponent<Flight>(); Log.LogInfo("F8 toggles vehicle flight in single-player."); }
+}
+public class Flight : MonoBehaviour
+{
+    const int ToggleKey = 0x77; // F8
+    const int ForwardKey = 0x57, BackKey = 0x53, RightKey = 0x44, LeftKey = 0x41;
+    const int UpKey = 0x20, DownKey = 0x11, BoostKey = 0x10;
+    const ushort LeftBumper = 0x0100;
+    const float FlightSpeed = 45f, BoostSpeed = 135f, TurnDegreesPerSecond = 90f;
+    const float MinimumDirectionSquared = 0.01f;
+    [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);
+    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+    [DllImport("xinput1_4.dll")] static extern uint XInputGetState(uint index, out ControllerState state);
+    [StructLayout(LayoutKind.Sequential)] struct Gamepad { public ushort buttons; public byte leftTrigger, rightTrigger; public short leftX, leftY, rightX, rightY; }
+    [StructLayout(LayoutKind.Sequential)] struct ControllerState { public uint packet; public Gamepad gamepad; }
+    static bool Focused() { GetWindowThreadProcessId(GetForegroundWindow(), out uint pid); return pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id; }
+    static bool Down(int key) { return Focused() && (GetAsyncKeyState(key) & 0x8000) != 0; }
+    static bool ReadController(out Gamepad pad) {
+        pad = default;
+        if (!Focused()) return false;
+        for (uint i = 0; i < 4; i++) if (XInputGetState(i, out var state) == 0) { pad = state.gamepad; return true; }
+        return false;
+    }
+    bool lastToggle, active, gravity, kinematic;
+    Rigidbody body;
+    VehiclePhysics.VehicleBase vehicle;
+    Vector3 flightPosition;
+    Quaternion flightRotation;
+    readonly List<(Collider collider, bool enabled)> colliders = new();
+    void Update()
+    {
+        bool toggle = Down(ToggleKey);
+        try {
+            var runner = OverlandNetworkRunner.Instance;
+            if (active && !IsCurrentLocalVehicle()) Stop();
+            if (toggle && !lastToggle) { if (active) Stop(); else StartFlight(runner); }
+        } catch (Exception e) { Debug.LogError("OTH NoClip: " + e); Stop(); }
+        lastToggle = toggle;
+    }
+    void LateUpdate()
+    {
+        try {
+            if (active && body != null) {
+                var direction = Vector3.zero;
+                var forward = Vector3.ProjectOnPlane(flightRotation * Vector3.forward, Vector3.up).normalized;
+                if (forward.sqrMagnitude < MinimumDirectionSquared) forward = Vector3.forward;
+                var right = Vector3.Cross(Vector3.up, forward);
+                if (Down(ForwardKey)) direction += forward;
+                if (Down(BackKey)) direction -= forward;
+                if (Down(RightKey)) direction += right;
+                if (Down(LeftKey)) direction -= right;
+                if (Down(UpKey)) direction += Vector3.up;
+                if (Down(DownKey)) direction -= Vector3.up;
+                bool boost = Down(BoostKey);
+                if (ReadController(out var pad)) {
+                    direction += forward * ControllerInput.Axis(pad.leftY) + right * ControllerInput.Axis(pad.leftX);
+                    direction += Vector3.up * (ControllerInput.Trigger(pad.rightTrigger) - ControllerInput.Trigger(pad.leftTrigger));
+                    boost |= (pad.buttons & LeftBumper) != 0;
+                    flightRotation = Quaternion.AngleAxis(ControllerInput.Axis(pad.rightX) * TurnDegreesPerSecond * Time.deltaTime, Vector3.up) * flightRotation;
+                }
+                float speed = boost ? BoostSpeed : FlightSpeed;
+                var requested = flightPosition + Vector3.ClampMagnitude(direction, 1f) * speed * Time.deltaTime;
+                flightPosition = requested;
+                body.rotation = flightRotation;
+                body.position = requested;
+            }
+        } catch (Exception e) { Debug.LogError("OTH NoClip: " + e); Stop(); }
+    }
+    void StartFlight(OverlandNetworkRunner runner)
+    {
+        if (runner == null || !runner.IsSinglePlayer || !OverlandNetworkRunner.IsLocalPlayerSpawned || runner.LocalPlayerNetworkObject == null) { Debug.LogWarning("OTH NoClip: single-player vehicle unavailable."); return; }
+        var player = runner.LocalPlayerNetworkObject.GetComponent<FusionPlayer>();
+        vehicle = player != null ? player.vehicleBase : null;
+        body = vehicle != null ? vehicle.cachedRigidbody : null;
+        if (body == null) { Debug.LogWarning("OTH NoClip: local vehicle not found."); return; }
+        gravity = body.useGravity; kinematic = body.isKinematic;
+        colliders.Clear();
+        foreach (var c in body.GetComponentsInChildren<Collider>(true)) { if (c != null) colliders.Add((c, c.enabled)); }
+        active = true;
+        PoseSuppression.Begin(body, IsCurrentLocalVehicle);
+        foreach (var item in colliders) item.collider.enabled = false;
+        if (!body.isKinematic) { body.velocity = Vector3.zero; body.angularVelocity = Vector3.zero; }
+        body.useGravity = false; body.isKinematic = true;
+        var forward = Vector3.ProjectOnPlane(body.transform.forward, Vector3.up);
+        if (forward.sqrMagnitude < MinimumDirectionSquared)
+            forward = Vector3.Cross(Vector3.ProjectOnPlane(body.transform.right, Vector3.up), Vector3.up);
+        if (forward.sqrMagnitude < MinimumDirectionSquared) forward = Vector3.forward;
+        flightPosition = body.position;
+        flightRotation = Quaternion.LookRotation(forward.normalized, Vector3.up);
+        body.rotation = flightRotation;
+        Plugin.Logger.LogInfo($"Flight enabled: vehicle={vehicle.name}, position={body.position}, colliders={colliders.Count}, originalKinematic={kinematic}, originalGravity={gravity}.");
+    }
+    bool IsCurrentLocalVehicle()
+    {
+        var runner = OverlandNetworkRunner.Instance;
+        if (!active || body == null || vehicle == null || runner == null || !runner.IsSinglePlayer || !OverlandNetworkRunner.IsLocalPlayerSpawned || runner.LocalPlayerNetworkObject == null) return false;
+        var player = runner.LocalPlayerNetworkObject.GetComponent<FusionPlayer>();
+        return player != null && player.vehicleBase != null && player.vehicleBase.Pointer == vehicle.Pointer && vehicle.cachedRigidbody != null && vehicle.cachedRigidbody.Pointer == body.Pointer;
+    }
+    void Stop() {
+        if (!active) return;
+        active = false;
+        PoseSuppression.End();
+        foreach (var item in colliders) {
+            try { if (item.collider != null) item.collider.enabled = item.enabled; }
+            catch (Exception e) { Plugin.Logger.LogWarning("Collider restoration failed: " + e.Message); }
+        }
+        colliders.Clear();
+        try { if (body != null) body.useGravity = gravity; }
+        catch (Exception e) { Plugin.Logger.LogWarning("Gravity restoration failed: " + e.Message); }
+        try { if (body != null) body.isKinematic = kinematic; }
+        catch (Exception e) { Plugin.Logger.LogWarning("Kinematic restoration failed: " + e.Message); }
+        body = null; vehicle = null;
+        Plugin.Logger.LogInfo("Flight disabled.");
+    }
+    void OnDestroy() { Stop(); }
+    void OnDisable() { Stop(); }
+}
+
+
