@@ -1,4 +1,4 @@
-# OTH-NoClip
+# oth-trainer
 
 A single-player Over the Hill mod that lets you fly your vehicle through obstacles. F8 toggles flight and levels the vehicle.
 
@@ -15,11 +15,11 @@ This is a prototype. The controller controls and activation while moving need fu
 ## Installation
 
 1. Close the game.
-2. Download `OTH-NoClip.dll` from the latest GitHub release.
-3. Copy it into the game's `BepInEx/plugins` folder, replacing an older version if present.
+2. Download the DLL from the latest GitHub release. Older releases use the name `OTH-NoClip.dll`; builds of the renamed project use `oth-trainer.dll`.
+3. Remove any older `OTH-NoClip.dll` or `oth-trainer.dll` from the game's `BepInEx/plugins` folder, then copy in the downloaded DLL. Keep only one version installed.
 4. Launch the game and enter a single-player session with a vehicle.
 
-To uninstall, close the game and remove `OTH-NoClip.dll` from `BepInEx/plugins`.
+To uninstall, close the game and remove the installed trainer DLL from `BepInEx/plugins`.
 
 ## Controls
 
@@ -54,7 +54,7 @@ The plugin code is in `src/`, its project file is in the repository root, and th
            └── core\             (copy of BepInEx\core)
    ```
 
-4. Open PowerShell in the extracted source folder containing `OTH-NoClip.csproj`. Set the following variables to your own support folder and installed .NET 6 runtime directory, then build:
+4. Open PowerShell in the extracted source folder containing `oth-trainer.csproj`. Set the following variables to your own support folder and installed .NET 6 runtime directory, then build:
 
 ```powershell
 $supportDir = 'path to your support folder'
@@ -62,7 +62,7 @@ $runtimeDir = 'path to your Microsoft.NETCore.App 6.0.x folder'
 dotnet build "-p:SupportDir=$supportDir" "-p:DotNet6RuntimeDir=$runtimeDir"
 ```
 
-5. After a successful build, find `OTH-NoClip.dll` in `bin\Debug\net10.0`. Close the game, copy the DLL into the game's `BepInEx\plugins` folder, and launch the game.
+5. After a successful build, find `oth-trainer.dll` in `bin\Debug\net10.0`. Close the game, remove any older trainer DLL, copy the new DLL into the game's `BepInEx\plugins` folder, and launch the game.
 
 For the runtime path, `dotnet --list-runtimes` displays the parent directory in brackets; append the listed 6.0.x version to that directory. `SupportDir` defaults to a `support` folder beside the source folder if omitted. The build may report reference warnings from native DLLs included by the project's wildcard references; check that it finishes with zero errors. If the mod fails to load or move the vehicle, check `BepInEx\LogOutput.log` in the game folder.
 
