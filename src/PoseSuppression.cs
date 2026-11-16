@@ -12,12 +12,12 @@ internal static class PoseSuppression
     internal static void Install()
     {
         try {
-            var target = typeof(Fusion.Addons.Physics.NetworkRigidbody3D).GetMethod(
+            var target = typeof(Il2CppFusion.Addons.Physics.NetworkRigidbody3D).GetMethod(
                 "ApplyRBPositionRotation", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly,
                 null, new[] { typeof(Rigidbody), typeof(Vector3), typeof(Quaternion) }, null);
             if (target == null) throw new MissingMethodException("NetworkRigidbody3D.ApplyRBPositionRotation");
             var prefix = typeof(PoseSuppression).GetMethod(nameof(BodyPrefix), BindingFlags.Static | BindingFlags.NonPublic);
-            new Harmony("local.oth.noclip.pose").Patch(target, new HarmonyMethod(prefix));
+            new HarmonyLib.Harmony("local.oth.noclip.pose").Patch(target, new HarmonyMethod(prefix));
             Plugin.Logger.LogInfo("Vehicle pose suppression patch installed.");
         } catch (Exception e) { Plugin.Logger.LogError("Vehicle pose suppression patch failed: " + e); }
     }
