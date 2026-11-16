@@ -70,6 +70,6 @@ Optionally pass `-p:DevelopmentPluginDir=<your staging directory>` to copy the b
 
 Run `dotnet run --project tests/ControllerInput.Tests.csproj` with the .NET 10 SDK. This dependency-free test runner checks the production controller stick and trigger scaling without requiring the game or BepInEx. A failure returns a nonzero exit code.
 
-GitHub Actions runs the same checks on pushes and pull requests as the `Unit tests` job. The plugin build requires game-generated dependencies and is not included in this automated check.
+GitHub Actions runs the same checks on pushes and pull requests as the `Unit tests` job. It reports line and branch coverage for `ControllerInput.cs` in the job summary; this is not coverage of the whole plugin. Coverage uses the free Coverlet tool and has no percentage threshold. The plugin build requires game-generated dependencies and is not included in this automated check.
 
 These checks do not exercise XInput, Unity, Fusion, flight activation, collision restoration, or gameplay. Those require integration or in-game testing; continue to test activation while moving, controller input, and safe toggle-off in a single-player session.
