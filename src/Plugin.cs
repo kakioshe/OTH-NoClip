@@ -1,19 +1,35 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using BepInEx;
-using BepInEx.Unity.IL2CPP;
+using MelonLoader;
+using Il2Cpp;
+using VehiclePhysics = Il2CppVehiclePhysics;
+using CommandTerminal = Il2CppCommandTerminal;
 using UnityEngine;
 
-[BepInPlugin("local.oth.noclip", "oth-trainer", "0.5.0")]
-public class Plugin : BasePlugin
+[assembly: MelonInfo(typeof(Plugin), "oth-trainer", "0.6.0", "oth-trainer")]
+[assembly: MelonGame("Funselektor", "over the hill")]
+
+public class Plugin : MelonMod
 {
-    internal static BepInEx.Logging.ManualLogSource Logger;
-    public override void Load() { Logger = Log; PoseSuppression.Install(); AddComponent<Flight>(); Log.LogInfo("F8 toggles vehicle flight in single-player."); }
+    internal static TrainerLogger Logger;
+    private Flight flight;
+    public override void OnInitializeMelon() { Logger = new TrainerLogger(LoggerInstance); PoseSuppression.Install(); flight = new Flight(); Logger.LogInfo("F8 toggles vehicle flight; F9 teleports to the map pin in single-player."); }
+    public override void OnUpdate() { flight?.Update(); }
+    public override void OnLateUpdate() { flight?.LateUpdate(); }
+    public override void OnDeinitializeMelon() { flight?.Stop(); }
 }
-public class Flight : MonoBehaviour
+internal sealed class TrainerLogger
 {
-    const int ToggleKey = 0x77; // F8
+    private readonly MelonLogger.Instance logger;
+    internal TrainerLogger(MelonLogger.Instance logger) { this.logger = logger; }
+    internal void LogInfo(string message) { logger.Msg(message); }
+    internal void LogWarning(string message) { logger.Warning(message); }
+    internal void LogError(string message) { logger.Error(message); }
+}
+public class Flight
+{
+    const int ToggleKey = 0x77, TeleportKey = 0x78; // F8, F9
     const int ForwardKey = 0x57, BackKey = 0x53, RightKey = 0x44, LeftKey = 0x41;
     const int UpKey = 0x20, DownKey = 0x11, BoostKey = 0x10;
     const ushort LeftBumper = 0x0100;
@@ -33,23 +49,26 @@ public class Flight : MonoBehaviour
         for (uint i = 0; i < 4; i++) if (XInputGetState(i, out var state) == 0) { pad = state.gamepad; return true; }
         return false;
     }
-    bool lastToggle, active, gravity, kinematic;
+    bool lastToggle, lastTeleport, active, gravity, kinematic;
     Rigidbody body;
     VehiclePhysics.VehicleBase vehicle;
     Vector3 flightPosition;
     Quaternion flightRotation;
     readonly List<(Collider collider, bool enabled)> colliders = new();
-    void Update()
+    internal void Update()
     {
         bool toggle = Down(ToggleKey);
+        bool teleport = Down(TeleportKey);
         try {
             var runner = OverlandNetworkRunner.Instance;
             if (active && !IsCurrentLocalVehicle()) Stop();
             if (toggle && !lastToggle) { if (active) Stop(); else StartFlight(runner); }
+            if (teleport && !lastTeleport) TeleportToPin(runner);
         } catch (Exception e) { Debug.LogError("oth-trainer: " + e); Stop(); }
         lastToggle = toggle;
+        lastTeleport = teleport;
     }
-    void LateUpdate()
+    internal void LateUpdate()
     {
         try {
             if (active && body != null) {
@@ -77,6 +96,23 @@ public class Flight : MonoBehaviour
                 body.position = requested;
             }
         } catch (Exception e) { Debug.LogError("oth-trainer: " + e); Stop(); }
+    }
+    void TeleportToPin(OverlandNetworkRunner runner)
+    {
+        if (active) { Plugin.Logger.LogWarning("Disable flight before teleporting to a map pin."); return; }
+        if (runner == null || !runner.IsSinglePlayer || !OverlandNetworkRunner.IsLocalPlayerSpawned || runner.LocalPlayerNetworkObject == null) {
+            Plugin.Logger.LogWarning("Teleport unavailable: single-player vehicle unavailable."); return;
+        }
+        var player = runner.LocalPlayerNetworkObject.GetComponent<FusionPlayer>();
+        if (player == null || player.vehicleBase == null || player.vehicleBase.cachedRigidbody == null) {
+            Plugin.Logger.LogWarning("Teleport unavailable: local vehicle not found."); return;
+        }
+        var map = MapNetworkManager.Instance;
+        if (map == null || !map.PlayerRefToPinpointPosition.TryGet(OverlandNetworkRunner.LocalPlayerRef, out _)) {
+            Plugin.Logger.LogWarning("Teleport unavailable: place a map pin first."); return;
+        }
+        CheatsController.TeleportAtPin(new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<CommandTerminal.CommandArg>(0));
+        Plugin.Logger.LogInfo("Requested teleport to the local player's map pin.");
     }
     void StartFlight(OverlandNetworkRunner runner)
     {
@@ -109,7 +145,7 @@ public class Flight : MonoBehaviour
         var player = runner.LocalPlayerNetworkObject.GetComponent<FusionPlayer>();
         return player != null && player.vehicleBase != null && player.vehicleBase.Pointer == vehicle.Pointer && vehicle.cachedRigidbody != null && vehicle.cachedRigidbody.Pointer == body.Pointer;
     }
-    void Stop() {
+    internal void Stop() {
         if (!active) return;
         active = false;
         PoseSuppression.End();
@@ -125,8 +161,7 @@ public class Flight : MonoBehaviour
         body = null; vehicle = null;
         Plugin.Logger.LogInfo("Flight disabled.");
     }
-    void OnDestroy() { Stop(); }
-    void OnDisable() { Stop(); }
 }
+
 
 
