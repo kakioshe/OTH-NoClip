@@ -22,8 +22,6 @@ public class Flight : MonoBehaviour
     [StructLayout(LayoutKind.Sequential)] struct ControllerState { public uint packet; public Gamepad gamepad; }
     static bool Focused() { GetWindowThreadProcessId(GetForegroundWindow(), out uint pid); return pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id; }
     static bool Down(int key) { return Focused() && (GetAsyncKeyState(key) & 0x8000) != 0; }
-    static float Axis(short value) { float v = Math.Max(-1f, value / 32767f); return Math.Abs(v) <= 0.2f ? 0f : Math.Sign(v) * (Math.Abs(v) - 0.2f) / 0.8f; }
-    static float Trigger(byte value) { return value <= 30 ? 0f : (value - 30) / 225f; }
     static bool ReadController(out Gamepad pad) {
         pad = default;
         if (!Focused()) return false;
@@ -83,10 +81,10 @@ public class Flight : MonoBehaviour
                 if (Down(0x11)) direction -= Vector3.up;
                 bool boost = Down(0x10);
                 if (ReadController(out var pad)) {
-                    direction += forward * Axis(pad.leftY) + right * Axis(pad.leftX);
-                    direction += Vector3.up * (Trigger(pad.rightTrigger) - Trigger(pad.leftTrigger));
+                    direction += forward * ControllerInput.Axis(pad.leftY) + right * ControllerInput.Axis(pad.leftX);
+                    direction += Vector3.up * (ControllerInput.Trigger(pad.rightTrigger) - ControllerInput.Trigger(pad.leftTrigger));
                     boost |= (pad.buttons & 0x0100) != 0; // Left bumper
-                    flightRotation = Quaternion.AngleAxis(Axis(pad.rightX) * 90f * Time.deltaTime, Vector3.up) * flightRotation;
+                    flightRotation = Quaternion.AngleAxis(ControllerInput.Axis(pad.rightX) * 90f * Time.deltaTime, Vector3.up) * flightRotation;
                 }
                 float speed = boost ? 135f : 45f;
                 var before = body.position;

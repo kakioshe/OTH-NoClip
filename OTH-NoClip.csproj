@@ -16,6 +16,7 @@
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopmentPluginDir)" />
   </Target>
   <ItemGroup>
+    <Compile Remove="tests\**\*.cs" />
     <Reference Include="$(DotNet6RuntimeDir)\*.dll" />
     <Reference Include="$(SupportDir)\interop\*.dll" />
     <Reference Include="$(SupportDir)\BepInEx-Setup\BepInEx\core\*.dll" />

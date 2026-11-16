@@ -65,3 +65,11 @@ dotnet build "-p:SupportDir=$supportDir" "-p:DotNet6RuntimeDir=$runtimeDir"
 For the runtime path, `dotnet --list-runtimes` displays the parent directory in brackets; append the listed 6.0.x version to that directory. `SupportDir` defaults to a `support` folder beside the source folder if omitted. The build may report reference warnings from native DLLs included by the project's wildcard references; check that it finishes with zero errors. If the mod fails to load or move the vehicle, check `BepInEx\LogOutput.log` in the game folder.
 
 Optionally pass `-p:DevelopmentPluginDir=<your staging directory>` to copy the built DLL there after a successful build. Close the game first if that directory is linked into its plugin loader.
+
+## Tests
+
+Run `dotnet run --project tests/ControllerInput.Tests.csproj` with the .NET 10 SDK. This dependency-free test runner checks the production controller stick and trigger scaling without requiring the game or BepInEx. A failure returns a nonzero exit code.
+
+GitHub Actions runs the same checks on pushes and pull requests as the `Unit tests` job. The plugin build requires game-generated dependencies and is not included in this automated check.
+
+These checks do not exercise XInput, Unity, Fusion, flight activation, collision restoration, or gameplay. Those require integration or in-game testing; continue to test activation while moving, controller input, and safe toggle-off in a single-player session.
