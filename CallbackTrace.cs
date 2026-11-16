@@ -8,11 +8,16 @@ using UnityEngine;
 internal static class CallbackTrace
 {
     private static readonly Dictionary<string, int> Counts = new();
+    private static readonly string RunId = Guid.NewGuid().ToString("N").Substring(0, 8);
+    private static int activation;
+    private static long suppressedCalls;
+    private static bool suppress;
+    private static Func<bool> eligible;
     private static IntPtr vehiclePointer, bodyPointer;
     private static Rigidbody body;
     private static float deadline;
     private static int samples;
-    private const int Limit = 500;
+    private const int Limit = 40; // Per callback/phase, so a busy method cannot starve other probes.
 
     internal static void Install()
     {
@@ -38,21 +43,27 @@ internal static class CallbackTrace
         } catch (Exception e) { Plugin.Logger.LogWarning("Trace patch failed: " + label + ": " + e); }
     }
 
-    internal static void Begin(VehiclePhysics.VehicleBase vehicle, Rigidbody rigidbody)
+    internal static void Begin(VehiclePhysics.VehicleBase vehicle, Rigidbody rigidbody, Func<bool> isEligible)
     {
-        Counts.Clear(); samples = 0;
+        Counts.Clear(); samples = 0; suppressedCalls = 0; activation++;
+        suppress = true; eligible = isEligible;
         vehiclePointer = vehicle.Pointer; bodyPointer = rigidbody.Pointer; body = rigidbody;
         deadline = Time.unscaledTime + 3f;
-        Plugin.Logger.LogInfo("Callback trace started: duration=3s, sampleLimit=500, authority=not captured; patch installation does not prove native interception.");
+        Plugin.Logger.LogInfo($"T01-E01 trace started: run={RunId}, activation={activation}, mode=suppress, vehiclePointer={vehiclePointer}, bodyPointer={bodyPointer}, duration=3s, perCallbackPhaseLimit={Limit}; suppression lasts until flight stops, not just the trace window.");
+        Plugin.Logger.LogInfo($"T01-E01 initial state: position={rigidbody.position}, rotation={rigidbody.rotation.eulerAngles}, velocity={rigidbody.velocity}, angularVelocity={rigidbody.angularVelocity}, kinematic={rigidbody.isKinematic}, gravity={rigidbody.useGravity}");
+        try { Plugin.Logger.LogInfo($"T01-E01 authority: state={vehicle.HasStateAuthority}, input={vehicle.HasInputAuthority}, parent={(rigidbody.transform.parent != null ? rigidbody.transform.parent.name : "none")}"); }
+        catch (Exception e) { Plugin.Logger.LogWarning("T01-E01 authority/parent unknown: " + e.Message); }
     }
 
     internal static void End()
     {
-        try {
-            foreach (var entry in Counts) Plugin.Logger.LogInfo($"Callback trace count: {entry.Key}={entry.Value}");
-            Plugin.Logger.LogInfo($"Callback trace ended: observed={samples}, sampleLimit={Limit}; absent callbacks do not prove absence of native calls.");
-        } catch (Exception e) { Plugin.Logger.LogWarning("Callback trace summary failed: " + e.Message); }
+        // Release the intervention before logging or restoring physics, even if either fails.
+        eligible = null; suppress = false;
         vehiclePointer = IntPtr.Zero; bodyPointer = IntPtr.Zero; body = null;
+        try {
+            foreach (var entry in Counts) Plugin.Logger.LogInfo($"Callback trace count: {entry.Key}={entry.Value}, omitted={Math.Max(0, entry.Value - Limit)}");
+            Plugin.Logger.LogInfo($"T01-E01 trace ended: run={RunId}, activation={activation}, detailedSamples={samples}, suppressedCalls={suppressedCalls}; counts cover first 3s; suppression count covers full activation. Exit pose was NOT reconciled; check snapback and normal driving. Absent callbacks do not prove absence of native calls.");
+        } catch (Exception e) { Plugin.Logger.LogWarning("Callback trace summary failed: " + e.Message); }
     }
 
     private static void VehiclePrefix(Il2CppObjectBase __instance, MethodBase __originalMethod) => RecordVehicle(__instance, __originalMethod, "before");
@@ -62,8 +73,20 @@ internal static class CallbackTrace
         try { if (vehiclePointer != IntPtr.Zero && instance != null && instance.Pointer == vehiclePointer) Record(method, phase, ""); }
         catch (Exception e) { Plugin.Logger.LogWarning("Vehicle trace failed: " + e.Message); }
     }
-    private static void BodyPrefix(Rigidbody __0, Vector3 __1, Quaternion __2, MethodBase __originalMethod) => RecordBody(__0, __1, __2, __originalMethod, "before");
-    private static void BodyPostfix(Rigidbody __0, Vector3 __1, Quaternion __2, MethodBase __originalMethod) => RecordBody(__0, __1, __2, __originalMethod, "after");
+    private static bool BodyPrefix(Rigidbody __0, Vector3 __1, Quaternion __2, MethodBase __originalMethod, out bool __state)
+    {
+        __state = false;
+        RecordBody(__0, __1, __2, __originalMethod, "before");
+        try {
+            if (suppress && bodyPointer != IntPtr.Zero && __0 != null && __0.Pointer == bodyPointer && eligible != null && eligible()) {
+                __state = true;
+                suppressedCalls++;
+                if (suppressedCalls == 1) Plugin.Logger.LogInfo($"T01-E01 suppression intercepted: run={RunId}, activation={activation}, frame={Time.frameCount}, bodyPointer={bodyPointer}");
+            }
+        } catch (Exception e) { Plugin.Logger.LogWarning("T01-E01 eligibility failed; allowing original callback: " + e.Message); __state = false; }
+        return !__state;
+    }
+    private static void BodyPostfix(Rigidbody __0, Vector3 __1, Quaternion __2, MethodBase __originalMethod, bool __state) => RecordBody(__0, __1, __2, __originalMethod, __state ? "after-skipped" : "after");
     private static void RecordBody(Rigidbody rb, Vector3 position, Quaternion rotation, MethodBase method, string phase)
     {
         try { if (bodyPointer != IntPtr.Zero && rb != null && rb.Pointer == bodyPointer) Record(method, phase, $", requestedPosition={position}, requestedRotation={rotation.eulerAngles}"); }
@@ -74,8 +97,8 @@ internal static class CallbackTrace
         if (Time.unscaledTime >= deadline || body == null) return;
         string key = method.DeclaringType.Name + "." + method.Name + "/" + method.GetParameters().Length + ":" + phase;
         Counts.TryGetValue(key, out int count); Counts[key] = count + 1;
-        if (samples++ >= Limit) return;
-        Plugin.Logger.LogInfo($"Callback trace {key}: frame={Time.frameCount}, time={Time.unscaledTime:F3}, fixedTime={Time.fixedTime:F3}, bodyPosition={body.position}, bodyRotation={body.rotation.eulerAngles}, transformPosition={body.transform.position}, transformRotation={body.transform.rotation.eulerAngles}{requested}");
+        if (count >= Limit) return;
+        samples++;
+        Plugin.Logger.LogInfo($"Callback trace {key}: run={RunId}, activation={activation}, frame={Time.frameCount}, time={Time.unscaledTime:F3}, fixedTime={Time.fixedTime:F3}, bodyPosition={body.position}, bodyRotation={body.rotation.eulerAngles}, transformPosition={body.transform.position}, transformRotation={body.transform.rotation.eulerAngles}{requested}");
     }
 }
-

@@ -2,6 +2,8 @@
 
 A single-player Over the Hill mod that lets you fly your vehicle through obstacles. F8 toggles flight and levels the vehicle.
 
+Press F8 to enable flight and F8 again to return to normal driving. Flight automatically prevents the local vehicle's network pose updates from overriding movement.
+
 ## Prerequisites
 
 - Over the Hill for Windows.
@@ -62,3 +64,4 @@ dotnet build "-p:SupportDir=$supportDir" "-p:DotNet6RuntimeDir=$runtimeDir"
 
 For the runtime path, `dotnet --list-runtimes` displays the parent directory in brackets; append the listed 6.0.x version to that directory. `SupportDir` defaults to a `support` folder beside the source folder if omitted. The build may report reference warnings from native DLLs included by the project's wildcard references; check that it finishes with zero errors. If the mod fails to load or move the vehicle, check `BepInEx\LogOutput.log` in the game folder.
 
+Optionally pass `-p:DevelopmentPluginDir=<your staging directory>` to copy the built DLL there after a successful build. Close the game first if that directory is linked into its plugin loader.

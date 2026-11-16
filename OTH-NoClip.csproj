@@ -11,10 +11,13 @@
     <Error Condition="'$(DotNet6RuntimeDir)' == '' Or !Exists('$(DotNet6RuntimeDir)\System.Private.CoreLib.dll')" Text="Set DotNet6RuntimeDir to your installed Microsoft.NETCore.App 6.0.x runtime directory. See README.md." />
     <Error Condition="!Exists('$(SupportDir)\interop\Assembly-CSharp.dll') Or !Exists('$(SupportDir)\BepInEx-Setup\BepInEx\core\BepInEx.Core.dll')" Text="Set SupportDir to a support folder containing the game interop and BepInEx core assemblies. See README.md." />
   </Target>
+  <Target Name="StageDevelopmentPlugin" AfterTargets="Build" Condition="'$(DevelopmentPluginDir)' != ''">
+    <MakeDir Directories="$(DevelopmentPluginDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DevelopmentPluginDir)" />
+  </Target>
   <ItemGroup>
     <Reference Include="$(DotNet6RuntimeDir)\*.dll" />
     <Reference Include="$(SupportDir)\interop\*.dll" />
     <Reference Include="$(SupportDir)\BepInEx-Setup\BepInEx\core\*.dll" />
   </ItemGroup>
 </Project>
-

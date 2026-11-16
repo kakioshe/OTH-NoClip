@@ -10,7 +10,7 @@ using UnityEngine;
 public class Plugin : BasePlugin
 {
     internal static BepInEx.Logging.ManualLogSource Logger;
-    public override void Load() { Logger = Log; CallbackTrace.Install(); AddComponent<Flight>(); Log.LogInfo("No-clip loaded. F8 toggles flight in single-player."); }
+    public override void Load() { Logger = Log; CallbackTrace.Install(); AddComponent<Flight>(); Log.LogInfo("OTH T01 F8-only: F8 toggles flight with automatic pose-write suppression. No exit-pose reconciliation; test near safe ground with a save backup."); }
 }
 public class Flight : MonoBehaviour
 {
@@ -45,7 +45,7 @@ public class Flight : MonoBehaviour
         bool toggle = Down(0x77);
         try {
             var runner = OverlandNetworkRunner.Instance;
-            if (active && (runner == null || !runner.IsSinglePlayer || !OverlandNetworkRunner.IsLocalPlayerSpawned)) Stop();
+            if (active && !IsCurrentLocalVehicle()) Stop();
             if (toggle && !lastToggle) { if (active) Stop(); else StartFlight(runner); }
             if (active && body != null && ShouldLogStage(ref nextUpdateDiagnostic)) LogStage("Update");
         } catch (Exception e) { Debug.LogError("OTH NoClip: " + e); Stop(); }
@@ -114,7 +114,7 @@ public class Flight : MonoBehaviour
         colliders.Clear();
         foreach (var c in body.GetComponentsInChildren<Collider>(true)) { if (c != null) colliders.Add((c, c.enabled)); }
         active = true;
-        CallbackTrace.Begin(vehicle, body);
+        CallbackTrace.Begin(vehicle, body, IsCurrentLocalVehicle);
         hasRequestedPosition = false;
         nextDiagnostic = 0f;
         diagnosticBurstEnd = Time.unscaledTime + 3f;
@@ -137,17 +137,31 @@ public class Flight : MonoBehaviour
         body.rotation = flightRotation;
         Plugin.Logger.LogInfo($"Flight enabled: vehicle={vehicle.name}, position={body.position}, colliders={colliders.Count}, originalKinematic={kinematic}, originalGravity={gravity}.");
     }
+    bool IsCurrentLocalVehicle()
+    {
+        var runner = OverlandNetworkRunner.Instance;
+        if (!active || body == null || vehicle == null || runner == null || !runner.IsSinglePlayer || !OverlandNetworkRunner.IsLocalPlayerSpawned || runner.LocalPlayerNetworkObject == null) return false;
+        var player = runner.LocalPlayerNetworkObject.GetComponent<FusionPlayer>();
+        return player != null && player.vehicleBase != null && player.vehicleBase.Pointer == vehicle.Pointer && vehicle.cachedRigidbody != null && vehicle.cachedRigidbody.Pointer == body.Pointer;
+    }
     void Stop() {
         if (!active) return;
-        foreach (var item in colliders) if (item.collider != null) item.collider.enabled = item.enabled;
-        colliders.Clear();
-        if (body != null) { body.useGravity = gravity; body.isKinematic = kinematic; }
+        active = false;
         CallbackTrace.End();
-        active = false; body = null; vehicle = null;
+        foreach (var item in colliders) {
+            try { if (item.collider != null) item.collider.enabled = item.enabled; }
+            catch (Exception e) { Plugin.Logger.LogWarning("Collider restoration failed: " + e.Message); }
+        }
+        colliders.Clear();
+        try { if (body != null) body.useGravity = gravity; }
+        catch (Exception e) { Plugin.Logger.LogWarning("Gravity restoration failed: " + e.Message); }
+        try { if (body != null) body.isKinematic = kinematic; }
+        catch (Exception e) { Plugin.Logger.LogWarning("Kinematic restoration failed: " + e.Message); }
+        body = null; vehicle = null;
         Plugin.Logger.LogInfo("Flight disabled.");
     }
     void OnDestroy() { Stop(); }
+    void OnDisable() { Stop(); }
 }
-
 
 
