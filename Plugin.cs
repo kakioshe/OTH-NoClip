@@ -3,17 +3,22 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using BepInEx;
 using BepInEx.Unity.IL2CPP;
-using Il2CppInterop.Runtime.InteropTypes;
 using UnityEngine;
 
-[BepInPlugin("local.oth.noclip", "OTH NoClip", "0.4.0")]
+[BepInPlugin("local.oth.noclip", "OTH NoClip", "0.5.0")]
 public class Plugin : BasePlugin
 {
     internal static BepInEx.Logging.ManualLogSource Logger;
-    public override void Load() { Logger = Log; CallbackTrace.Install(); AddComponent<Flight>(); Log.LogInfo("OTH T01 F8-only: F8 toggles flight with automatic pose-write suppression. No exit-pose reconciliation; test near safe ground with a save backup."); }
+    public override void Load() { Logger = Log; PoseSuppression.Install(); AddComponent<Flight>(); Log.LogInfo("F8 toggles vehicle flight in single-player."); }
 }
 public class Flight : MonoBehaviour
 {
+    const int ToggleKey = 0x77; // F8
+    const int ForwardKey = 0x57, BackKey = 0x53, RightKey = 0x44, LeftKey = 0x41;
+    const int UpKey = 0x20, DownKey = 0x11, BoostKey = 0x10;
+    const ushort LeftBumper = 0x0100;
+    const float FlightSpeed = 45f, BoostSpeed = 135f, TurnDegreesPerSecond = 90f;
+    const float MinimumDirectionSquared = 0.01f;
     [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
@@ -31,39 +36,18 @@ public class Flight : MonoBehaviour
     bool lastToggle, active, gravity, kinematic;
     Rigidbody body;
     VehiclePhysics.VehicleBase vehicle;
-    float nextDiagnostic;
-    Vector3 lastRequestedPosition;
     Vector3 flightPosition;
     Quaternion flightRotation;
-    bool hasRequestedPosition;
-    float diagnosticBurstEnd, nextUpdateDiagnostic, nextFixedDiagnostic;
     readonly List<(Collider collider, bool enabled)> colliders = new();
     void Update()
     {
-        bool toggle = Down(0x77);
+        bool toggle = Down(ToggleKey);
         try {
             var runner = OverlandNetworkRunner.Instance;
             if (active && !IsCurrentLocalVehicle()) Stop();
             if (toggle && !lastToggle) { if (active) Stop(); else StartFlight(runner); }
-            if (active && body != null && ShouldLogStage(ref nextUpdateDiagnostic)) LogStage("Update");
         } catch (Exception e) { Debug.LogError("OTH NoClip: " + e); Stop(); }
         lastToggle = toggle;
-    }
-    void FixedUpdate()
-    {
-        try { if (active && body != null && ShouldLogStage(ref nextFixedDiagnostic)) LogStage("FixedUpdate"); }
-        catch (Exception e) { Debug.LogError("OTH NoClip: " + e); Stop(); }
-    }
-    bool ShouldLogStage(ref float nextSample)
-    {
-        if (Time.unscaledTime < diagnosticBurstEnd) return true;
-        if (Time.unscaledTime < nextSample) return false;
-        nextSample = Time.unscaledTime + 1f;
-        return true;
-    }
-    void LogStage(string stage)
-    {
-        Plugin.Logger.LogInfo($"Pose stage {stage}: frame={Time.frameCount}, time={Time.unscaledTime:F3}, fixedTime={Time.fixedTime:F3}, position={body.position}, rotation={body.rotation.eulerAngles}, transformPosition={body.transform.position}, previousRequested={(hasRequestedPosition ? lastRequestedPosition.ToString() : "none")}, velocity={body.velocity}, kinematic={body.isKinematic}, interpolation={body.interpolation}");
     }
     void LateUpdate()
     {
@@ -71,33 +55,26 @@ public class Flight : MonoBehaviour
             if (active && body != null) {
                 var direction = Vector3.zero;
                 var forward = Vector3.ProjectOnPlane(flightRotation * Vector3.forward, Vector3.up).normalized;
-                if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
+                if (forward.sqrMagnitude < MinimumDirectionSquared) forward = Vector3.forward;
                 var right = Vector3.Cross(Vector3.up, forward);
-                if (Down(0x57)) direction += forward;
-                if (Down(0x53)) direction -= forward;
-                if (Down(0x44)) direction += right;
-                if (Down(0x41)) direction -= right;
-                if (Down(0x20)) direction += Vector3.up;
-                if (Down(0x11)) direction -= Vector3.up;
-                bool boost = Down(0x10);
+                if (Down(ForwardKey)) direction += forward;
+                if (Down(BackKey)) direction -= forward;
+                if (Down(RightKey)) direction += right;
+                if (Down(LeftKey)) direction -= right;
+                if (Down(UpKey)) direction += Vector3.up;
+                if (Down(DownKey)) direction -= Vector3.up;
+                bool boost = Down(BoostKey);
                 if (ReadController(out var pad)) {
                     direction += forward * ControllerInput.Axis(pad.leftY) + right * ControllerInput.Axis(pad.leftX);
                     direction += Vector3.up * (ControllerInput.Trigger(pad.rightTrigger) - ControllerInput.Trigger(pad.leftTrigger));
-                    boost |= (pad.buttons & 0x0100) != 0; // Left bumper
-                    flightRotation = Quaternion.AngleAxis(ControllerInput.Axis(pad.rightX) * 90f * Time.deltaTime, Vector3.up) * flightRotation;
+                    boost |= (pad.buttons & LeftBumper) != 0;
+                    flightRotation = Quaternion.AngleAxis(ControllerInput.Axis(pad.rightX) * TurnDegreesPerSecond * Time.deltaTime, Vector3.up) * flightRotation;
                 }
-                float speed = boost ? 135f : 45f;
-                var before = body.position;
+                float speed = boost ? BoostSpeed : FlightSpeed;
                 var requested = flightPosition + Vector3.ClampMagnitude(direction, 1f) * speed * Time.deltaTime;
                 flightPosition = requested;
                 body.rotation = flightRotation;
                 body.position = requested;
-                if (Time.unscaledTime < diagnosticBurstEnd || Time.unscaledTime >= nextDiagnostic) {
-                    Plugin.Logger.LogInfo($"Flight diagnostic: frame={Time.frameCount}, time={Time.unscaledTime:F3}, fixedTime={Time.fixedTime:F3}, input={direction}, position={before}, rotation={body.rotation.eulerAngles}, previousRequested={(hasRequestedPosition ? lastRequestedPosition.ToString() : "none")}, requested={requested}, actualAfterWrite={body.position}, kinematic={body.isKinematic}, focused={Focused()}, dt={Time.deltaTime:F4}");
-                    nextDiagnostic = Time.unscaledTime + 1f;
-                }
-                lastRequestedPosition = requested;
-                hasRequestedPosition = true;
             }
         } catch (Exception e) { Debug.LogError("OTH NoClip: " + e); Stop(); }
     }
@@ -112,24 +89,14 @@ public class Flight : MonoBehaviour
         colliders.Clear();
         foreach (var c in body.GetComponentsInChildren<Collider>(true)) { if (c != null) colliders.Add((c, c.enabled)); }
         active = true;
-        CallbackTrace.Begin(vehicle, body, IsCurrentLocalVehicle);
-        hasRequestedPosition = false;
-        nextDiagnostic = 0f;
-        diagnosticBurstEnd = Time.unscaledTime + 3f;
-        nextUpdateDiagnostic = diagnosticBurstEnd;
-        nextFixedDiagnostic = diagnosticBurstEnd;
-        foreach (var component in body.GetComponentsInParent<Component>(true)) {
-            if (component == null) continue;
-            try { Plugin.Logger.LogInfo($"Vehicle component: object={component.gameObject.name}, type={component.GetIl2CppType().FullName}, managedType={component.GetType().FullName}"); }
-            catch (Exception e) { Plugin.Logger.LogWarning($"Vehicle component identification failed: {e.Message}"); }
-        }
+        PoseSuppression.Begin(body, IsCurrentLocalVehicle);
         foreach (var item in colliders) item.collider.enabled = false;
         if (!body.isKinematic) { body.velocity = Vector3.zero; body.angularVelocity = Vector3.zero; }
         body.useGravity = false; body.isKinematic = true;
         var forward = Vector3.ProjectOnPlane(body.transform.forward, Vector3.up);
-        if (forward.sqrMagnitude < 0.01f)
+        if (forward.sqrMagnitude < MinimumDirectionSquared)
             forward = Vector3.Cross(Vector3.ProjectOnPlane(body.transform.right, Vector3.up), Vector3.up);
-        if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
+        if (forward.sqrMagnitude < MinimumDirectionSquared) forward = Vector3.forward;
         flightPosition = body.position;
         flightRotation = Quaternion.LookRotation(forward.normalized, Vector3.up);
         body.rotation = flightRotation;
@@ -145,7 +112,7 @@ public class Flight : MonoBehaviour
     void Stop() {
         if (!active) return;
         active = false;
-        CallbackTrace.End();
+        PoseSuppression.End();
         foreach (var item in colliders) {
             try { if (item.collider != null) item.collider.enabled = item.enabled; }
             catch (Exception e) { Plugin.Logger.LogWarning("Collider restoration failed: " + e.Message); }
