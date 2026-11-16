@@ -1,12 +1,16 @@
 # oth-trainer
 
-A Windows single-player Over the Hill mod for flying your vehicle and requesting a teleport to a map pin. This development version requires MelonLoader and needs in-game testing. Back up your save before testing.
+A Windows single-player Over the Hill mod for flying your vehicle and teleporting to a map pin. Version 0.6 requires MelonLoader. Back up your save before using the mod.
 
 ## Installation
 
 1. Install [MelonLoader](https://github.com/LavaGang/MelonLoader) for the game. Development uses MelonLoader 0.7.3 x64. Launch the game once and close it to generate the required assemblies.
 2. Copy `oth-trainer.dll` to the game's `Mods` folder. Remove older copies of the trainer so only one is loaded.
 3. Launch the game and enter a single-player session with a vehicle.
+
+### Upgrading from BepInEx (v0.5 and earlier)
+
+Close the game and back up your saves and existing loader files. Disable the previous BepInEx installation before installing MelonLoader: move its `BepInEx` folder, `winhttp.dll`, `doorstop_config.ini`, and `.doorstop_version` outside the game folder, if present and belonging to that installation. Keep the backup until the new setup works. Do not run both loaders or retain an older trainer in an active plugin folder. The v0.6 ZIP contains a `Mods` folder; extract it into the game folder after installing MelonLoader. The loader itself is not included.
 
 To uninstall, close the game and remove `Mods/oth-trainer.dll`. Check `MelonLoader/Latest.log` for startup and diagnostic messages.
 
@@ -24,7 +28,9 @@ Keep the game focused. Disable flight in a clear area above solid ground; the ve
 | Boost | Shift | Left bumper |
 | Request teleport to map pin | F9 | — |
 
-Place a pin on the map with right-click and disable flight before pressing F9. Teleportation is experimental and has not been verified in-game. The first connected XInput controller is used; sticks and triggers are proportional after a dead zone.
+Place a pin on the map with right-click and disable flight before pressing F9. Choose clear ground and check your surroundings after arrival. The first connected XInput controller is used; sticks and triggers are proportional after a dead zone.
+
+Flight and map-pin teleport were reported working in single-player with MelonLoader 0.7.3, Unity 6000.0.75f1 and game version 0.0.1. The startup log confirms trainer loading, pose patch installation, flight toggles and teleport requests. Controller, focus changes, respawn and every teleport refusal case have not been individually verified. This report used the development assembly labelled 0.5.0; the v0.6.0 candidate changes only the version label and documentation.
 
 ## Building from source
 

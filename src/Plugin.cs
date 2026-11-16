@@ -7,7 +7,7 @@ using VehiclePhysics = Il2CppVehiclePhysics;
 using CommandTerminal = Il2CppCommandTerminal;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(Plugin), "oth-trainer", "0.5.0", "oth-trainer")]
+[assembly: MelonInfo(typeof(Plugin), "oth-trainer", "0.6.0", "oth-trainer")]
 [assembly: MelonGame("Funselektor", "over the hill")]
 
 public class Plugin : MelonMod
