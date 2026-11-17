@@ -5,10 +5,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\src\FlightHeading.cs" Link="FlightHeading.cs" />
-    <Compile Include="..\src\ControllerInput.cs" Link="ControllerInput.cs" />
-    <Compile Include="..\src\TrainerBindings.cs" Link="TrainerBindings.cs" />
-    <Compile Include="..\src\GameInputBlocker.cs" Link="GameInputBlocker.cs" />
-    <Compile Include="..\src\InputConsumption.cs" Link="InputConsumption.cs" />
+    <Compile Include="..\src\Features\Flight\FlightHeading.cs" Link="FlightHeading.cs" />
+    <Compile Include="..\src\Runtime\TrainerLifetime.cs" Link="TrainerLifetime.cs" />
+    <Compile Include="..\src\Configuration\BindingStore.cs" Link="BindingStore.cs" />
+    <Compile Include="..\src\Input\ControllerInput.cs" Link="ControllerInput.cs" />
+    <Compile Include="..\src\Configuration\TrainerBindings.cs" Link="TrainerBindings.cs" />
+    <Compile Include="..\src\Input\GameInputBlocker.cs" Link="GameInputBlocker.cs" />
+    <Compile Include="..\src\Input\InputConsumption.cs" Link="InputConsumption.cs" />
   </ItemGroup>
 </Project>

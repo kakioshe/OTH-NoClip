@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 internal enum TrainerAction { Menu, Flight, Teleport, Forward, Back, Left, Right, Rise, Descend, TurnLeft, TurnRight, Boost }
 [Flags]
@@ -115,13 +114,6 @@ internal sealed class TrainerBindings
             if (pad != PadControl.None && !seenPads.Add(pad)) { result.pads[action] = PadControl.None; rejected++; }
         }
         return result;
-    }
-    internal void Save(string path)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
-        string temporary = path + ".tmp";
-        File.WriteAllText(temporary, Serialize());
-        File.Move(temporary, path, true);
     }
     internal static string Label(TrainerAction action) => action switch
     {

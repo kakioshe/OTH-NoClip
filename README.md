@@ -1,6 +1,6 @@
 # Port's Trainer
 
-A Windows single-player trainer for **over the hill**, built for MelonLoader. Version **0.7.0** adds a compact controls menu, persistent keyboard and Xbox bindings, and camera-relative flight.
+A Windows single-player trainer for **over the hill**, built for MelonLoader. Version **0.6.1** reorganizes the source and separates runtime responsibilities, retaining the compact controls menu, persistent keyboard and Xbox bindings, and camera-relative flight.
 
 ## Install
 
@@ -73,6 +73,10 @@ Output: `bin/Release/net10.0/oth-trainer.dll`. Optional `DevelopmentPluginDir` c
 dotnet run --project tests/ControllerInput.Tests.csproj --configuration Release
 ```
 
-The checks cover controller scaling, binding conflicts and persistence, legacy configuration migration, fixed menu controls, camera-heading normalization and fallback, input-block lifecycle, and selective control consumption. They run without game assemblies. The **Unit tests** GitHub Actions job also reports scoped line and branch coverage for the independent controller, binding, heading and input-policy classes. Coverage does not measure the complete plugin or establish runtime integration behavior.
+The checks cover controller scaling, binding conflicts and persistence, legacy configuration migration, fixed menu controls, camera-heading normalization and fallback, input-block lifecycle, selective control consumption, and resource cleanup after partial initialization or failures. They run without game assemblies. The **Unit tests** GitHub Actions job also reports scoped line and branch coverage for the independent controller, binding, storage, heading, input-policy and resource-lifetime classes. Coverage does not measure the complete plugin or establish runtime integration behavior.
+
+The loader entry point delegates to `TrainerRuntime`, which wires dependencies and orders frame updates. Flight and map-pin teleport are separate features using `LocalVehicleProvider` for single-player eligibility and vehicle identity. Input polling and menu presentation stay outside those features. `TrainerBindings` owns validation and serialization; `BindingStore` owns file access. Dependencies receive their logger explicitly, and `TrainerLifetime` releases resources in reverse acquisition order, including after partial initialization. Harmony callbacks use a small static bridge to their current owner; the owner removes its hooks during disposal.
+
+Source folders group runtime, features, game integration, input, configuration, UI and diagnostics. See [Source organization](docs/architecture.md) for ownership boundaries and guidance on adding vehicle features.
 
 Submit changes through a pull request with the behavior change and verification described. Main requires a pull request and a successful **Unit tests** check. Keep generated assemblies, binaries, saves and local tooling out of source control.

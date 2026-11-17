@@ -11,7 +11,7 @@ def summary(label, hits):
     return f"{label}: {covered}/{len(hits)} ({100 * covered / len(hits):.1f}%)"
 
 sections = ["Scoped input and binding coverage (not whole-plugin coverage)"]
-for source in ("ControllerInput.cs", "TrainerBindings.cs", "GameInputBlocker.cs", "InputConsumption.cs", "FlightHeading.cs"):
+for source in ("ControllerInput.cs", "TrainerBindings.cs", "GameInputBlocker.cs", "InputConsumption.cs", "FlightHeading.cs", "TrainerLifetime.cs", "BindingStore.cs"):
     documents = [
         classes
         for module in report.values()

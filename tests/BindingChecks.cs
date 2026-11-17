@@ -150,12 +150,25 @@ internal static class BindingChecks
         string path = Path.Combine(directory, "bindings.cfg");
         try
         {
-            bindings.Save(path);
+            var store = new BindingStore(path);
+            var missing = store.Load(out rejected);
+            check("missing settings load defaults without writing a file", missing.Key(TrainerAction.Flight) == 0x77 && rejected == 0 && !File.Exists(path));
+            store.Save(bindings);
             check("save creates configuration directory", File.Exists(path));
             bindings.SetKey(TrainerAction.Flight, 0x24, out _);
-            bindings.Save(path);
-            check("save replaces existing configuration", TrainerBindings.Parse(File.ReadAllText(path), out rejected).Key(TrainerAction.Flight) == 0x24 && rejected == 0);
+            store.Save(bindings);
+            check("save replaces existing configuration", store.Load(out rejected).Key(TrainerAction.Flight) == 0x24 && rejected == 0);
             check("save leaves no temporary file", !File.Exists(path + ".tmp"));
+            File.WriteAllText(path, "invalid=value");
+            check("store preserves parser diagnostics", store.Load(out rejected).Key(TrainerAction.Flight) == 0x77 && rejected == 1);
+            bool rejectedNull = false;
+            try { store.Save(null); }
+            catch (ArgumentNullException) { rejectedNull = true; }
+            check("store rejects missing bindings", rejectedNull);
+            bool rejectedPath = false;
+            try { new BindingStore(" "); }
+            catch (ArgumentException) { rejectedPath = true; }
+            check("store rejects empty path", rejectedPath);
         }
         finally
         {

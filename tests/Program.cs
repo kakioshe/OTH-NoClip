@@ -33,5 +33,13 @@ BindingChecks.Run((name, passed) =>
     failures++;
 });
 
-Console.WriteLine($"{checks - failures}/{checks} controller and binding checks passed.");
+LifetimeChecks.Run((name, passed) =>
+{
+    checks++;
+    if (passed) return;
+    Console.Error.WriteLine("FAIL " + name);
+    failures++;
+});
+
+Console.WriteLine($"{checks - failures}/{checks} trainer checks passed.");
 return failures == 0 ? 0 : 1;

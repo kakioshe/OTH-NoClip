@@ -30,6 +30,8 @@ jobs:
           --include "[ControllerInput.Tests]GameInputBlocker"
           --include "[ControllerInput.Tests]InputConsumption"
           --include "[ControllerInput.Tests]FlightHeading"
+          --include "[ControllerInput.Tests]TrainerLifetime"
+          --include "[ControllerInput.Tests]BindingStore"
           --include-test-assembly
           --format json --output coverage.json
       - name: Report production coverage
