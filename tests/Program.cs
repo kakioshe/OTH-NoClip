@@ -1,9 +1,11 @@
 using System;
 
 int failures = 0;
+int checks = 0;
 
 void Check(string name, float actual, float expected, float tolerance = 0.00001f)
 {
+    checks++;
     if (float.IsFinite(actual) && Math.Abs(actual - expected) <= tolerance) return;
     Console.Error.WriteLine($"FAIL {name}: expected {expected}, got {actual}");
     failures++;
@@ -23,5 +25,13 @@ Check("trigger just outside dead zone", ControllerInput.Trigger(31), 1f / 225f);
 Check("trigger midpoint", ControllerInput.Trigger(120), 0.4f);
 Check("trigger maximum", ControllerInput.Trigger(byte.MaxValue), 1);
 
-Console.WriteLine(failures == 0 ? "13 controller input checks passed." : $"{failures} controller input checks failed.");
+BindingChecks.Run((name, passed) =>
+{
+    checks++;
+    if (passed) return;
+    Console.Error.WriteLine("FAIL " + name);
+    failures++;
+});
+
+Console.WriteLine($"{checks - failures}/{checks} controller and binding checks passed.");
 return failures == 0 ? 0 : 1;

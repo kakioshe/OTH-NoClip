@@ -1,23 +1,63 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System.IO;
 using MelonLoader;
+using MelonLoader.Utils;
 using Il2Cpp;
 using VehiclePhysics = Il2CppVehiclePhysics;
 using CommandTerminal = Il2CppCommandTerminal;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(Plugin), "oth-trainer", "0.6.0", "oth-trainer")]
+[assembly: MelonInfo(typeof(Plugin), "Port's Trainer", "0.7.0", "Port")]
 [assembly: MelonGame("Funselektor", "over the hill")]
 
 public class Plugin : MelonMod
 {
     internal static TrainerLogger Logger;
     private Flight flight;
-    public override void OnInitializeMelon() { Logger = new TrainerLogger(LoggerInstance); PoseSuppression.Install(); flight = new Flight(); Logger.LogInfo("F8 toggles vehicle flight; F9 teleports to the map pin in single-player."); }
-    public override void OnUpdate() { flight?.Update(); }
-    public override void OnLateUpdate() { flight?.LateUpdate(); }
-    public override void OnDeinitializeMelon() { flight?.Stop(); }
+    private TrainerInput input;
+    private TrainerMenu menu;
+    private GameInputBlocker gameInput;
+    private GameBindingSuppression gameBindings;
+    public override void OnInitializeMelon()
+    {
+        Logger = new TrainerLogger(LoggerInstance);
+        PoseSuppression.Install();
+        input = new TrainerInput();
+        menu = new TrainerMenu(input, Path.Combine(MelonEnvironment.UserDataDirectory, "PortsTrainer.bindings.cfg"));
+        flight = new Flight(input, menu);
+        gameInput = new GameInputBlocker(() => {
+            var runner = OverlandNetworkRunner.Instance;
+            return runner != null && runner.IsSinglePlayer && OverlandNetworkRunner.IsLocalPlayerSpawned;
+        }, AcquireGameInputBlock, Logger.LogWarning);
+        gameBindings = new GameBindingSuppression(IsInputEligible, () => flight.Active, () => menu.Bindings);
+        Logger.LogInfo("Port's Trainer: Insert opens the controls menu. Camera-relative flight. Default F8 flight / F9 map-pin teleport. v0.7.0.");
+    }
+    public override void OnUpdate()
+    {
+        input?.Poll(); menu?.Update(); flight?.Update();
+        if (input != null && menu != null && flight != null)
+            gameInput.Update(menu.Visible, input.Released);
+        gameBindings?.Update();
+    }
+    public override void OnLateUpdate() { flight?.LateUpdate(); menu?.MaintainCursor(); }
+    public override void OnGUI() { menu?.Draw(); }
+    public override void OnDeinitializeMelon() { menu?.Close(); flight?.Stop(); gameInput?.Release(); gameBindings?.Dispose(); }
+
+    private static bool IsInputEligible()
+    {
+        var runner = OverlandNetworkRunner.Instance;
+        return GameInput.IsReady && runner != null && runner.IsSinglePlayer && OverlandNetworkRunner.IsLocalPlayerSpawned;
+    }
+
+    private static Action AcquireGameInputBlock()
+    {
+        const int trainerMapPriority = 10000;
+        var token = GameInput.PushMap(GameInput.Map.GameHasNoFocus, trainerMapPriority);
+        Logger.LogInfo("Trainer acquired gameplay input block.");
+        return () => { GameInput.PopMap(token); Logger.LogInfo("Trainer released gameplay input block."); };
+    }
+
 }
 internal sealed class TrainerLogger
 {
@@ -29,27 +69,14 @@ internal sealed class TrainerLogger
 }
 public class Flight
 {
-    const int ToggleKey = 0x77, TeleportKey = 0x78; // F8, F9
-    const int ForwardKey = 0x57, BackKey = 0x53, RightKey = 0x44, LeftKey = 0x41;
-    const int UpKey = 0x20, DownKey = 0x11, BoostKey = 0x10;
-    const ushort LeftBumper = 0x0100;
-    const float FlightSpeed = 45f, BoostSpeed = 135f, TurnDegreesPerSecond = 90f;
+    const float FlightSpeed = 45f, BoostSpeed = 135f;
     const float MinimumDirectionSquared = 0.01f;
-    [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);
-    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
-    [DllImport("xinput1_4.dll")] static extern uint XInputGetState(uint index, out ControllerState state);
-    [StructLayout(LayoutKind.Sequential)] struct Gamepad { public ushort buttons; public byte leftTrigger, rightTrigger; public short leftX, leftY, rightX, rightY; }
-    [StructLayout(LayoutKind.Sequential)] struct ControllerState { public uint packet; public Gamepad gamepad; }
-    static bool Focused() { GetWindowThreadProcessId(GetForegroundWindow(), out uint pid); return pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id; }
-    static bool Down(int key) { return Focused() && (GetAsyncKeyState(key) & 0x8000) != 0; }
-    static bool ReadController(out Gamepad pad) {
-        pad = default;
-        if (!Focused()) return false;
-        for (uint i = 0; i < 4; i++) if (XInputGetState(i, out var state) == 0) { pad = state.gamepad; return true; }
-        return false;
-    }
-    bool lastToggle, lastTeleport, active, gravity, kinematic;
+    private readonly TrainerInput input;
+    private readonly TrainerMenu menu;
+    internal Flight(TrainerInput input, TrainerMenu menu) { this.input = input; this.menu = menu; }
+    internal bool Active => active;
+    private float Value(TrainerAction action) => menu.BlocksActions ? 0f : input.Value(menu.Bindings, action);
+    bool active, gravity, kinematic;
     Rigidbody body;
     VehiclePhysics.VehicleBase vehicle;
     Vector3 flightPosition;
@@ -57,45 +84,44 @@ public class Flight
     readonly List<(Collider collider, bool enabled)> colliders = new();
     internal void Update()
     {
-        bool toggle = Down(ToggleKey);
-        bool teleport = Down(TeleportKey);
         try {
             var runner = OverlandNetworkRunner.Instance;
             if (active && !IsCurrentLocalVehicle()) Stop();
-            if (toggle && !lastToggle) { if (active) Stop(); else StartFlight(runner); }
-            if (teleport && !lastTeleport) TeleportToPin(runner);
-        } catch (Exception e) { Debug.LogError("oth-trainer: " + e); Stop(); }
-        lastToggle = toggle;
-        lastTeleport = teleport;
+            if (!menu.BlocksActions && input.Pressed(menu.Bindings, TrainerAction.Flight)) { if (active) Stop(); else StartFlight(runner); }
+            if (!menu.BlocksActions && input.Pressed(menu.Bindings, TrainerAction.Teleport)) TeleportToPin(runner);
+        } catch (Exception e) { Debug.LogError("Port's Trainer: " + e); Stop(); }
     }
     internal void LateUpdate()
     {
         try {
             if (active && body != null) {
+                // Keep position and heading still while editing or unfocused.
+                if (!menu.BlocksActions)
+                {
+                    var camera = Camera.main;
+                    if (camera != null && camera.isActiveAndEnabled)
+                    {
+                        var view = camera.transform.forward;
+                        var previous = flightRotation * Vector3.forward;
+                        var heading = FlightHeading.Horizontal(view.x, view.z, previous.x, previous.z);
+                        flightRotation = Quaternion.LookRotation(new Vector3(heading.x, 0f, heading.z), Vector3.up);
+                    }
+                }
                 var direction = Vector3.zero;
                 var forward = Vector3.ProjectOnPlane(flightRotation * Vector3.forward, Vector3.up).normalized;
                 if (forward.sqrMagnitude < MinimumDirectionSquared) forward = Vector3.forward;
                 var right = Vector3.Cross(Vector3.up, forward);
-                if (Down(ForwardKey)) direction += forward;
-                if (Down(BackKey)) direction -= forward;
-                if (Down(RightKey)) direction += right;
-                if (Down(LeftKey)) direction -= right;
-                if (Down(UpKey)) direction += Vector3.up;
-                if (Down(DownKey)) direction -= Vector3.up;
-                bool boost = Down(BoostKey);
-                if (ReadController(out var pad)) {
-                    direction += forward * ControllerInput.Axis(pad.leftY) + right * ControllerInput.Axis(pad.leftX);
-                    direction += Vector3.up * (ControllerInput.Trigger(pad.rightTrigger) - ControllerInput.Trigger(pad.leftTrigger));
-                    boost |= (pad.buttons & LeftBumper) != 0;
-                    flightRotation = Quaternion.AngleAxis(ControllerInput.Axis(pad.rightX) * TurnDegreesPerSecond * Time.deltaTime, Vector3.up) * flightRotation;
-                }
+                direction += forward * (Value(TrainerAction.Forward) - Value(TrainerAction.Back));
+                direction += right * (Value(TrainerAction.Right) - Value(TrainerAction.Left));
+                direction += Vector3.up * (Value(TrainerAction.Rise) - Value(TrainerAction.Descend));
+                bool boost = Value(TrainerAction.Boost) > 0.5f;
                 float speed = boost ? BoostSpeed : FlightSpeed;
                 var requested = flightPosition + Vector3.ClampMagnitude(direction, 1f) * speed * Time.deltaTime;
                 flightPosition = requested;
                 body.rotation = flightRotation;
                 body.position = requested;
             }
-        } catch (Exception e) { Debug.LogError("oth-trainer: " + e); Stop(); }
+        } catch (Exception e) { Debug.LogError("Port's Trainer: " + e); Stop(); }
     }
     void TeleportToPin(OverlandNetworkRunner runner)
     {
@@ -116,11 +142,11 @@ public class Flight
     }
     void StartFlight(OverlandNetworkRunner runner)
     {
-        if (runner == null || !runner.IsSinglePlayer || !OverlandNetworkRunner.IsLocalPlayerSpawned || runner.LocalPlayerNetworkObject == null) { Debug.LogWarning("oth-trainer: single-player vehicle unavailable."); return; }
+        if (runner == null || !runner.IsSinglePlayer || !OverlandNetworkRunner.IsLocalPlayerSpawned || runner.LocalPlayerNetworkObject == null) { Debug.LogWarning("Port's Trainer: single-player vehicle unavailable."); return; }
         var player = runner.LocalPlayerNetworkObject.GetComponent<FusionPlayer>();
         vehicle = player != null ? player.vehicleBase : null;
         body = vehicle != null ? vehicle.cachedRigidbody : null;
-        if (body == null) { Debug.LogWarning("oth-trainer: local vehicle not found."); return; }
+        if (body == null) { Debug.LogWarning("Port's Trainer: local vehicle not found."); return; }
         gravity = body.useGravity; kinematic = body.isKinematic;
         colliders.Clear();
         foreach (var c in body.GetComponentsInChildren<Collider>(true)) { if (c != null) colliders.Add((c, c.enabled)); }

@@ -26,6 +26,10 @@ jobs:
           --target dotnet
           --targetargs "tests/bin/Release/net10.0/ControllerInput.Tests.dll"
           --include "[ControllerInput.Tests]ControllerInput"
+          --include "[ControllerInput.Tests]TrainerBindings"
+          --include "[ControllerInput.Tests]GameInputBlocker"
+          --include "[ControllerInput.Tests]InputConsumption"
+          --include "[ControllerInput.Tests]FlightHeading"
           --include-test-assembly
           --format json --output coverage.json
       - name: Report production coverage

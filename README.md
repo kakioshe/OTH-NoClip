@@ -1,51 +1,78 @@
-# oth-trainer
+# Port's Trainer
 
-A Windows single-player Over the Hill mod for flying your vehicle and teleporting to a map pin. Version 0.6 requires MelonLoader. Back up your save before using the mod.
+A Windows single-player trainer for **over the hill**, built for MelonLoader. Version **0.7.0** adds a compact controls menu, persistent keyboard and Xbox bindings, and camera-relative flight.
 
-## Installation
+## Install
 
-1. Install [MelonLoader](https://github.com/LavaGang/MelonLoader) for the game. Development uses MelonLoader 0.7.3 x64. Launch the game once and close it to generate the required assemblies.
-2. Copy `oth-trainer.dll` to the game's `Mods` folder. Remove older copies of the trainer so only one is loaded.
-3. Launch the game and enter a single-player session with a vehicle.
+1. Install [MelonLoader](https://github.com/LavaGang/MelonLoader) x64 for the game. This project uses version 0.7.3. Launch the game once, then close it.
+2. Download the trainer ZIP from [Releases](https://github.com/kakioshe/oth-trainer/releases) and extract it into the game folder. The DLL should be at `Mods/oth-trainer.dll`.
+3. Launch the game and enter a single-player session. Press **Insert** to open Port's Trainer.
 
-### Upgrading from BepInEx (v0.5 and earlier)
+Close the game before installing or updating. Keep only one trainer DLL in `Mods`. The package includes the trainer and instructions; install MelonLoader separately. Back up your saves before using the trainer.
 
-Close the game and back up your saves and existing loader files. Disable the previous BepInEx installation before installing MelonLoader: move its `BepInEx` folder, `winhttp.dll`, `doorstop_config.ini`, and `.doorstop_version` outside the game folder, if present and belonging to that installation. Keep the backup until the new setup works. Do not run both loaders or retain an older trainer in an active plugin folder. The v0.6 ZIP contains a `Mods` folder; extract it into the game folder after installing MelonLoader. The loader itself is not included.
+To uninstall, close the game and remove `Mods/oth-trainer.dll`. Optional saved bindings are at `UserData/PortsTrainer.bindings.cfg`. Startup and diagnostic messages appear in `MelonLoader/Latest.log`.
 
-To uninstall, close the game and remove `Mods/oth-trainer.dll`. Check `MelonLoader/Latest.log` for startup and diagnostic messages.
-
-## Controls
-
-Keep the game focused. Disable flight in a clear area above solid ground; the vehicle may fall when gravity returns.
+## Default controls
 
 | Action | Keyboard | Xbox controller |
 | --- | --- | --- |
-| Toggle flight | F8 | — |
-| Move forward/back | W / S | Left stick up/down |
-| Move sideways | A / D | Left stick left/right |
-| Turn | — | Right stick left/right |
-| Rise / descend | Space / Ctrl | Right trigger / left trigger |
-| Boost | Shift | Left bumper |
-| Request teleport to map pin | F9 | — |
+| Open / close menu | Insert (fixed) | - |
+| Toggle flight | F8 | - |
+| Forward / back | W / S | Left stick up / down |
+| Strafe left / right | A / D | Left stick left / right |
+| Ascend / descend | Up / Down arrow | Right / left trigger |
+| Boost | B | Left bumper |
+| Teleport to map pin | F9 | - |
 
-Place a pin on the map with right-click and disable flight before pressing F9. Choose clear ground and check your surroundings after arrival. The first connected XInput controller is used; sticks and triggers are proportional after a dead zone.
+Flight follows the camera's **horizontal direction**, and the car faces that direction while staying level. Use ascend and descend to change height. The right stick remains available for the game camera unless assigned to another trainer action. If the camera is unavailable or points straight up or down, flight keeps its previous heading.
 
-Flight and map-pin teleport were reported working in single-player with MelonLoader 0.7.3, Unity 6000.0.75f1 and game version 0.0.1. The startup log confirms trainer loading, pose patch installation, flight toggles and teleport requests. Controller, focus changes, respawn and every teleport refusal case have not been individually verified. This report used the development assembly labelled 0.5.0; the v0.6.0 candidate changes only the version label and documentation.
+Disable flight above clear, solid ground; the vehicle may fall when gravity returns. To teleport, place a map pin with right-click, disable flight, then press F9. Teleport requires a spawned local vehicle in single-player.
 
-## Building from source
+The first connected XInput controller is used. Sticks and triggers support proportional movement with dead zones.
 
-Install the .NET 10 SDK and .NET 6 runtime. Install MelonLoader, start the game once, and close it so `MelonLoader/Il2CppAssemblies` is generated. The game assemblies and loader are not included in this repository.
+## Customize controls
 
-From the source folder, set paths for your machine and build:
+Press Insert, then click a keyboard or controller field to rebind it. Release held controls before entering the new binding. Keyboard shortcuts support Ctrl, Shift and Alt with a main key, such as **Shift + Q**; modifiers cannot be assigned alone.
+
+- Click **×** to clear a binding. Each active shortcut or controller input belongs to one action.
+- Press **Escape** to cancel capture or close the menu. **Restore defaults** resets both columns.
+- Insert is fixed and cannot be cleared or rebound. F10 and controller buttons do not open the menu.
+- Changes save automatically to `UserData/PortsTrainer.bindings.cfg`. Existing custom action bindings are retained; older menu bindings become Insert, and modifier-only bindings are cleared.
+
+A configured combination takes precedence over the same plain movement key. Action shortcuts require exact modifiers; plain movement remains usable while other modifiers are held. Escape and F10 are unavailable as trainer bindings. System and overlay shortcuts may intercept some combinations.
+
+Opening the menu holds active flight in place and blocks gameplay input until the menu closes and held controls release. **The world keeps running.** Losing focus closes the menu and restores the cursor; release held controls before resuming trainer actions.
+
+Outside the menu, the trainer reserves only controls needed by available actions. Unused map and game controls remain available during flight. Controller reservations can cover a whole stick or axis when a trainer action uses one direction. Temporary game binding overrides are restored without saving game settings.
+
+## Compatibility and limits
+
+Development uses MelonLoader 0.7.3 x64, Unity 6000.0.75f1 and game version 0.0.1. The trainer is restricted to the local vehicle in single-player. Compatibility with later game or loader versions is not established.
+
+The compact menu received user approval during development; earlier flight and map-pin teleport were user tested. Camera-relative flight, all controller combinations, focus/session transitions and game-input override restoration have not received exhaustive runtime testing. Input suppression attempts an early update hook and logs a warning if it must fall back to per-frame updates; first-frame conflicts may then occur.
+
+## Build
+
+Install the **.NET 10 SDK** and **.NET 6 runtime**. Initialize MelonLoader by launching the game once so `MelonLoader/Il2CppAssemblies` exists, then close the game. Loader and game assemblies are not included in this repository.
+
+From the repository root:
 
 ```powershell
 $gameDir = 'path to your game folder'
-$runtimeDir = 'path to your Microsoft.NETCore.App 6.0.x folder'
-dotnet build "-p:GameDir=$gameDir" "-p:DotNet6RuntimeDir=$runtimeDir"
+$runtimeDir = 'path to Microsoft.NETCore.App/6.0.x'
+dotnet build --configuration Release "-p:GameDir=$gameDir" "-p:DotNet6RuntimeDir=$runtimeDir"
 ```
 
-Use `dotnet --list-runtimes` to find the .NET 6 runtime directory; append the version to the parent path shown in brackets. Alternatively set `MelonLoaderDir` to a copied `MelonLoader` folder containing `net6` and `Il2CppAssemblies`. The build may warn about native files included by wildcard references; check for zero errors. The output is `bin/Debug/net10.0/oth-trainer.dll`. Optionally set `DevelopmentPluginDir` to stage the output there after a successful build; close the game first.
+Use `dotnet --list-runtimes` to find the runtime directory; append the displayed 6.0.x version to its parent path. You can set `MelonLoaderDir` instead of `GameDir` when building against a separate initialized loader folder containing `net6` and `Il2CppAssemblies`.
 
-## Tests
+Output: `bin/Release/net10.0/oth-trainer.dll`. Optional `DevelopmentPluginDir` copies a successful build into a staging folder; close the game before replacing an installed DLL. Wildcard assembly references may warn about native files; a successful build must finish with zero errors.
 
-Run `dotnet run --project tests/ControllerInput.Tests.csproj` with the .NET 10 SDK. These 13 checks cover controller stick and trigger scaling. GitHub Actions runs them as `Unit tests` and reports scoped coverage of `ControllerInput.cs`. The checks do not cover Unity, Fusion, loader integration, flight or teleportation; those require in-game testing.
+## Tests and contributions
+
+```powershell
+dotnet run --project tests/ControllerInput.Tests.csproj --configuration Release
+```
+
+The checks cover controller scaling, binding conflicts and persistence, legacy configuration migration, fixed menu controls, camera-heading normalization and fallback, input-block lifecycle, and selective control consumption. They run without game assemblies. The **Unit tests** GitHub Actions job also reports scoped line and branch coverage for the independent controller, binding, heading and input-policy classes. Coverage does not measure the complete plugin or establish runtime integration behavior.
+
+Submit changes through a pull request with the behavior change and verification described. Main requires a pull request and a successful **Unit tests** check. Keep generated assemblies, binaries, saves and local tooling out of source control.
