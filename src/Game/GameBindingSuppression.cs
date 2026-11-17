@@ -15,6 +15,7 @@ internal sealed class GameBindingSuppression
         internal string Id;
         internal InputBinding Original;
     }
+    private readonly TrainerLogger logger;
     private readonly List<OwnedBinding> owned = new();
     private readonly bool[] keys = new bool[256];
     private readonly Func<bool> eligible, flight;
@@ -27,8 +28,9 @@ internal sealed class GameBindingSuppression
     private readonly HarmonyLib.Harmony hook = new("local.oth.trainer.input");
     private static GameBindingSuppression current;
 
-    internal GameBindingSuppression(Func<bool> eligible, Func<bool> flight, Func<TrainerBindings> bindings)
+    internal GameBindingSuppression(Func<bool> eligible, Func<bool> flight, Func<TrainerBindings> bindings, TrainerLogger logger)
     {
+        this.logger = logger;
         this.eligible = eligible; this.flight = flight; this.bindings = bindings;
         current = this;
         try
@@ -37,9 +39,9 @@ internal sealed class GameBindingSuppression
             var target = manager?.GetMethod("OnBeforeUpdate", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             if (target == null) throw new MissingMethodException("InputManager.OnBeforeUpdate");
             hook.Patch(target, new HarmonyMethod(typeof(GameBindingSuppression).GetMethod(nameof(BeforeInput), BindingFlags.Static | BindingFlags.NonPublic)));
-            Plugin.Logger.LogInfo("Selective game binding suppression hook installed (runtime verification pending).");
+            logger.LogInfo("Selective game binding suppression hook installed (runtime verification pending).");
         }
-        catch (Exception error) { Plugin.Logger.LogWarning("Early input hook unavailable; first-frame conflicts may occur: " + error.Message); }
+        catch (Exception error) { logger.LogWarning("Early input hook unavailable; first-frame conflicts may occur: " + error.Message); }
     }
     private static void BeforeInput() => current?.Update();
 
@@ -89,7 +91,7 @@ internal sealed class GameBindingSuppression
         }
         catch (Exception error)
         {
-            if (!warned) Plugin.Logger.LogWarning("Selective game binding suppression unavailable: " + error.Message);
+            if (!warned) logger.LogWarning("Selective game binding suppression unavailable: " + error.Message);
             warned = true;
             Release();
         }
@@ -154,7 +156,7 @@ internal sealed class GameBindingSuppression
                 if (StillOwned(item, current)) Restore(item);
                 owned.RemoveAt(i);
             }
-            catch (Exception error) { if (!warned) Plugin.Logger.LogWarning("Binding restoration will retry: " + error.Message); warned = true; }
+            catch (Exception error) { if (!warned) logger.LogWarning("Binding restoration will retry: " + error.Message); warned = true; }
         }
     }
     internal void Dispose() { current = null; try { hook.UnpatchSelf(); } finally { Release(); } }

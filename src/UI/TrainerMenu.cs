@@ -1,10 +1,10 @@
 using System;
-using System.IO;
 using UnityEngine;
 internal sealed class TrainerMenu
 {
     private readonly TrainerInput input;
-    private readonly string configPath;
+    private readonly BindingStore settings;
+    private readonly TrainerLogger logger;
     internal TrainerBindings Bindings { get; private set; } = new();
     internal bool Visible { get; private set; }
 
@@ -15,18 +15,14 @@ internal sealed class TrainerMenu
     private CursorLockMode previousLock;
     private bool previousCursor;
     private GUIStyle titleStyle, labelStyle, buttonStyle, noteStyle;
-    internal TrainerMenu(TrainerInput input, string configPath)
+    internal TrainerMenu(TrainerInput input, BindingStore settings, TrainerLogger logger)
     {
-        this.input = input; this.configPath = configPath;
+        this.input = input; this.settings = settings; this.logger = logger;
 
         try
         {
-            if (File.Exists(configPath))
-            {
-                Bindings = TrainerBindings.Parse(File.ReadAllText(configPath), out int rejected);
-
-                if (rejected > 0) message = $"Ignored {rejected} invalid or conflicting settings. Review bindings below.";
-            }
+            Bindings = settings.Load(out int rejected);
+            if (rejected > 0) message = $"Ignored {rejected} invalid or conflicting settings. Review bindings below.";
         }
         catch (Exception e) { ReportFailure("Could not load settings; defaults are active", e); }
     }
@@ -100,7 +96,7 @@ internal sealed class TrainerMenu
     }
     private void Save()
     {
-        try { Bindings.Save(configPath); message = ""; }
+        try { settings.Save(Bindings); message = ""; }
 
         catch (Exception e) { ReportFailure("Settings work for this session, but could not be saved", e); }
     }
@@ -108,7 +104,7 @@ internal sealed class TrainerMenu
     {
         message = text + ": " + error.Message;
 
-        Plugin.Logger.LogWarning(message);
+        logger.LogWarning(message);
     }
     private void BeginCapture(TrainerAction action, bool controller)
     {

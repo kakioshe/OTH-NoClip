@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1
+
+This maintenance release follows the previously published 0.7.0 menu build. It retains those features while assigning the source organization and refactor to 0.6.1. The earlier 0.7.0 release remains part of the published history.
+
+- Group source by feature and responsibility, with documented ownership boundaries and guidance for future vehicle controls.
+- Separate loader lifecycle, frame orchestration, flight, map-pin teleport, vehicle lookup and binding storage into focused classes with explicit dependencies.
+- Release owned hooks and input resources during shutdown and partial initialization; cover resource-lifetime and storage behavior with automated checks.
+
 ## 0.7.0
 
 - Add Port's Trainer, a compact menu opened with Insert.
