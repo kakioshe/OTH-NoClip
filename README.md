@@ -1,6 +1,6 @@
 # Port's Trainer
 
-A Windows single-player trainer for **over the hill**, built for MelonLoader. Version **0.8.1** adds experimental High-range overdrive alongside repair, flip, vehicle tuning and presets, God mode, Water immunity and Spider mode. It includes the earlier menu, persistent keyboard/Xbox bindings, camera-relative flight and map-pin teleport.
+A Windows single-player trainer for **over the hill**, built for MelonLoader. Version **0.8.1** adds Simple and Detailed vehicle tuning. Simple coordinates speed, power and gearing automatically; Detailed retains individual settings and presets. Repair, flip, God mode, Water immunity, Spider mode, keyboard/Xbox bindings, camera-relative flight and map-pin teleport remain available.
 
 ## Install
 
@@ -55,7 +55,15 @@ The Vehicle tab includes **Repair car**. Click **Repair** to request a full repa
 
 **God mode** prevents new damage through the current local car's damage multiplier and damage handler. It leaves existing damage in place and restores the previous multiplier when disabled. Flooding and other environmental failures are outside this protection.
 
-**Vehicle modifiers** groups five sliders under an **Active / Inactive** checkbox. Each number is editable: press Enter or click outside the field to apply it. Values must fall within the listed range; invalid entries restore the previous value. Typed values retain their precision, while sliders move in 0.05 steps. Preferences can be adjusted while inactive. The modifiers apply relative to the current car's legitimate baseline:
+**Vehicle tuning** has two modes, with **Simple** selected by default. Click **Enable tuning** to apply your settings, or **Disable tuning** to return to stock performance. The visible badge reads **OFF**, **ON**, **WAITING** or **PAUSED**. ON means performance values were successfully applied; changing a slider while OFF only edits your preferences. Each mode keeps its own values, and tuning starts OFF. Switching modes also turns it off. God mode, repair and assists remain independent.
+
+**Simple** offers **Top speed (1–3x), Acceleration (0.5–3x), Grip (0.5–2x), Steering (0.5–1.5x) and Braking (0.5–2x)**. A value of 1x is stock. Top speed coordinates the engine's speed ceiling and forward High gearing. Supporting power compensates for taller gearing, with the acceleration slider applied on top; there is no separate power/overdrive combination to choose. Grip, steering and braking remain independently adjustable.
+
+Stop to apply a top-speed change. If the car is moving, the complete previous tune stays applied until it stops; first activation waits with stock performance. Acceleration and handling edits can apply while moving when the top-speed setting is unchanged. Turning tuning off releases both performance values and automatic gearing. Simple and Detailed preferences are saved separately in `UserData/PortsTrainer.simple-vehicle.cfg` and `UserData/PortsTrainer.vehicle.cfg`. Activation is not saved.
+
+These multipliers are tuning requests, not calibrated guarantees of exact road speed or acceleration. Terrain, traction, selected gear/range and engine power still matter. The engine RPM limits and Low/reverse ratios remain stock. Start with Top speed 1.5x or 2x and Acceleration 1x. The automatic calculation and mode lifecycle have independent tests; the combined driving effect still needs gameplay validation.
+
+**Detailed** retains independently adjustable **Power, Speed limit, Grip, Steering angle, Braking strength and tuning presets**, plus a **High-gear speed boost** slider. The same **Enable tuning / Disable tuning** button controls all performance and gearing changes. The five performance numbers are editable: press Enter or click outside the field to accept a value. Invalid entries restore the previous value. Sliders move in 0.05 steps. Preferences can be edited while OFF and apply relative to the current car's legitimate baseline:
 
 | Setting | Range | Meaning |
 | --- | --- | --- |
@@ -65,7 +73,7 @@ The Vehicle tab includes **Repair car**. Click **Repair** to request a full repa
 | Steering angle | 0.5–1.5x | Maximum wheel steering angle |
 | Braking strength | 0.5–2x | Service-brake torque |
 
-Unchecking Active restores owned baseline values while keeping slider preferences. **Restore stock** unchecks Active, resets the five preferences to 1x and immediately releases High-range overdrive. Both actions leave God mode and repairs independent. Performance modifiers pause during flight and resume afterward. Losing the car/session switches both controls off; enable them explicitly for the next car. Shared asset settings are refused, and unknown external writes stop the controls rather than overwriting those values.
+**Disable tuning** restores owned performance and gearing baselines while keeping slider preferences. **Restore stock** turns tuning OFF, resets both modes' preferences to 1x and immediately releases gearing changes. Both actions leave God mode and repairs independent. Performance modifiers pause during flight and resume afterward. Losing the car/session switches tuning off; enable it explicitly for the next car. Shared asset settings are refused, and unknown external writes stop the controls rather than overwriting those values.
 
 The existing vehicle settings were reported working in development testing. Protection coverage, upgrade rebasing and cleanup across all car/session transitions still require further runtime validation. A higher speed-limit multiplier does not guarantee that the engine/gearing can reach it or enforce a hard downhill cap. This report does not establish every grip/terrain interaction.
 
@@ -79,11 +87,11 @@ Spider mode uses wheel contacts plus short probes below and in the travel direct
 
 Both assist switches start off, reset on vehicle/session loss and remain independent of God mode, performance modifiers and Restore stock. The independent motor policies and lifecycle have automated checks; those checks do not establish game physics or native-hook interception.
 
-**High-range overdrive** is a separate experimental control, with **1x (stock), 1.5x, 2x and 3x** buttons. Stop the car before selecting a value. It extends forward High-range gearing while retaining Low, reverse, the existing gears and normal engine RPM limits. For example, 2x divides the effective final reduction by two, allowing approximately twice the road speed per engine revolution while halving wheel torque for a given engine torque. This does not guarantee twice the attainable speed. High first gear also becomes taller; use Low for starting or climbing.
+**High-gear speed boost** is an experimental slider in Detailed, ranging from **1x (stock) to 3x**. It lets forward high gears run faster at the same engine RPM, at the cost of pulling force. Low and reverse ratios, gear count and engine RPM limits stay stock. Detailed leaves Power and Speed limit under your control; choose Simple to calculate the combination automatically.
 
-Overdrive starts at 1x, is not saved and is independent of performance modifiers, Power, Speed limit and tuning presets. It releases during flight, disabled input, neutral/reverse or shifting, and resets on vehicle/session loss or a fault. **Restore stock** releases it immediately even while moving. Unknown differential writes are preserved and stop overdrive. No shared High/Low settings or gearbox arrays are modified.
+The gear preference lasts for this session, applies only when tuning is ON, and waits until stopped before changing the complete tune. It releases during flight, disabled input, neutral/reverse or shifting. Disabling tuning, Restore stock, vehicle/session loss or a fault releases owned changes. Unknown differential writes are preserved. No shared High/Low settings or gearbox arrays are modified.
 
-For a first comparison, leave Spider mode off and use the same Power and Speed limit values on the same level road. Select 1x while stopped and record High/1st and High/2nd RPM at a repeatable road speed. Stop and repeat at 1.5x, then 2x. Compare RPM at the same speed rather than assuming a top-speed gain. Check Low, reverse, manual shifts and restoration separately. Each selection records up to 90 input-hook samples, at most one per second, in `MelonLoader/Latest.log`; logs include range, requested/engaged gear, RPM, road speed, wheel angular velocity/slip and effective reduction. Native interception, physical effects and transition behavior remain runtime-unverified for 0.8.1.
+For a first test, leave Spider mode off, select Simple, set Top speed to 2x and Acceleration to 1x, stop and click Enable tuning. Confirm ON before driving. Compare speed, acceleration, Low/reverse, manual shifts and restoration. Bounded input-hook telemetry records up to 90 samples at most once per second after a gearing change in `MelonLoader/Latest.log`. Combined Simple driving and the revised UI remain runtime-unverified.
 
 ## Compatibility and testing
 

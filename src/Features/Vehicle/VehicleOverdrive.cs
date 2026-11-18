@@ -17,12 +17,14 @@ internal sealed class VehicleOverdrive : IDisposable
     private IVehicleOverdriveTarget target;
     internal float Multiplier { get; private set; } = 1;
     internal string Status { get; private set; } = "";
+    internal bool WaitingForStop { get; private set; }
 
     internal VehicleOverdrive(Func<IVehicleOverdriveTarget> resolve, Action<string> report)
     { this.resolve = resolve; this.report = report; }
 
     internal bool Select(float multiplier)
     {
+        WaitingForStop = false;
         if (!ValidMultiplier(multiplier)) return false;
         try
         {
@@ -30,7 +32,7 @@ internal sealed class VehicleOverdrive : IDisposable
             if (target == null || !target.Eligible) throw new InvalidOperationException("An authoritative local single-player car is required.");
             float speed = target.Speed;
             if (!float.IsFinite(speed) || speed < 0 || speed > StoppedSpeed)
-            { Status = "Stop the car before changing High-range overdrive."; return false; }
+            { WaitingForStop = true; Status = "Stop the car before changing High-range overdrive."; return false; }
             target.SetMultiplier(multiplier);
             Multiplier = multiplier;
             Status = "";
@@ -64,6 +66,7 @@ internal sealed class VehicleOverdrive : IDisposable
     internal void Reset()
     {
         Multiplier = 1;
+        WaitingForStop = false;
         var previous = target;
         target = null;
         Status = "";

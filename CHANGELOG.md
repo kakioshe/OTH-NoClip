@@ -2,12 +2,15 @@
 
 ## 0.8.1
 
-- Add experimental High-range overdrive at 1x (stock), 1.5x, 2x and 3x, with stopped-only selection and anchored help. Taller forward High gearing trades wheel torque for road speed per engine revolution; attainable speed still depends on power and resistance.
-- Preserve Low, reverse, existing gear count/spacing and engine RPM settings. Keep overdrive session-only and independent of saved presets and performance activation. Restore stock releases it immediately.
+- Add Simple and Detailed tuning modes, with Simple selected by default. Simple exposes Top speed, Acceleration, Grip, Steering and Braking, calculating the speed ceiling, forward gearing and compensating power together.
+- Keep independently adjustable original settings and presets in Detailed. Save both profiles independently without activation. Mode changes switch tuning off; Restore stock resets both profiles. Speed/gearing edits wait until stopped, retaining the complete previous tune until then.
+- Add explicit Enable tuning / Disable tuning buttons and an OFF / ON / WAITING / PAUSED badge. ON reflects successfully applied performance values, rather than merely a requested switch. Disabling releases performance and gearing changes in both modes.
+- Expose experimental gearing in Detailed as a High-gear speed boost slider from 1x to 3x, with plain-language help. Taller forward High gearing trades wheel torque for road speed per engine revolution; attainable speed still depends on power and resistance.
+- Preserve Low, reverse, existing gear count/spacing and engine RPM settings. The detailed gear preference is session-only and separate from saved presets. Restore stock releases it immediately.
 - Release the owned effective reduction around the local native input writer; reapply only for enabled High-forward input with a forward engaged gear and no shift. Pause during flight, reset on car/session loss or faults, validate drivetrain identity/isolation, and preserve unknown external writes.
 - Add bounded input-hook telemetry for comparing range, selected/requested/engaged gear, RPM/limiter, speed, wheel angular velocity/slip and baseline/effective reduction. Extend independent policy tests and scoped coverage.
 
-Runtime validation of the new gearing, native interception, Low/reverse behavior and restoration is pending. Automated checks and compilation do not establish gameplay behavior.
+Development logs confirm the earlier overdrive-only candidate loaded and intercepted the input writer, applied 8-to-4 High reduction at 2x and retained stock reduction during shifts. The same drive held near 27 km/h with a 7.5 m/s speed-control setting, consistent with the speed limiter holding it below redline. Simple now coordinates that ceiling with gearing. Combined Simple driving, new mode rendering, Low/reverse and full restoration remain runtime-unverified. Automated checks and compilation do not establish gameplay behavior.
 
 ## 0.8.0
 

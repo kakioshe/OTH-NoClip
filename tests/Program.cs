@@ -89,5 +89,13 @@ OverdriveChecks.Run((name, passed) =>
     failures++;
 });
 
+VehicleTuningChecks.Run((name, passed) =>
+{
+    checks++;
+    if (passed) return;
+    Console.Error.WriteLine("FAIL " + name);
+    failures++;
+});
+
 Console.WriteLine($"{checks - failures}/{checks} trainer checks passed.");
 return failures == 0 ? 0 : 1;
