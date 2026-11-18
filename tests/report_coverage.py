@@ -10,8 +10,8 @@ def summary(label, hits):
     covered = sum(hit > 0 for hit in hits)
     return f"{label}: {covered}/{len(hits)} ({100 * covered / len(hits):.1f}%)"
 
-sections = ["Scoped input and binding coverage (not whole-plugin coverage)"]
-for source in ("ControllerInput.cs", "TrainerBindings.cs", "GameInputBlocker.cs", "InputConsumption.cs", "FlightHeading.cs", "TrainerLifetime.cs", "BindingStore.cs"):
+sections = ["Scoped trainer policy coverage (not whole-plugin coverage)"]
+for source in ("ControllerInput.cs", "TrainerBindings.cs", "GameInputBlocker.cs", "InputConsumption.cs", "FlightHeading.cs", "TrainerLifetime.cs", "BindingStore.cs", "VehicleModifierValue.cs", "VehiclePreferences.cs", "VehiclePresets.cs", "VehicleAssists.cs", "SurfaceDrive.cs", "VehicleRepair.cs", "VehicleFlip.cs", "VehicleValueInput.cs", "VehicleControls.cs", "VehicleValueGroup.cs", "VehicleProtection.cs", "VehiclePreferenceStore.cs"):
     documents = [
         classes
         for module in report.values()
@@ -33,4 +33,4 @@ text = "\n".join(sections)
 print(text)
 if os.environ.get("GITHUB_STEP_SUMMARY"):
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary_file:
-        summary_file.write("## Input and binding coverage\n\n" + text.replace("\n", "  \n") + "\n")
+        summary_file.write("## Trainer policy coverage\n\n" + text.replace("\n", "  \n") + "\n")

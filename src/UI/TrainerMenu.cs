@@ -5,6 +5,8 @@ internal sealed class TrainerMenu
     private readonly TrainerInput input;
     private readonly BindingStore settings;
     private readonly TrainerLogger logger;
+    private readonly Action<Rect> drawVehicle;
+    private bool vehicleSelected;
     internal TrainerBindings Bindings { get; private set; } = new();
     internal bool Visible { get; private set; }
 
@@ -15,9 +17,10 @@ internal sealed class TrainerMenu
     private CursorLockMode previousLock;
     private bool previousCursor;
     private GUIStyle titleStyle, labelStyle, buttonStyle, noteStyle;
-    internal TrainerMenu(TrainerInput input, BindingStore settings, TrainerLogger logger)
+    internal TrainerMenu(TrainerInput input, BindingStore settings, TrainerLogger logger, Action<Rect> drawVehicle = null)
     {
         this.input = input; this.settings = settings; this.logger = logger;
+        this.drawVehicle = drawVehicle;
 
         try
         {
@@ -112,9 +115,9 @@ internal sealed class TrainerMenu
 
         message = controller ? "Use a controller input - Esc cancels" : "Press a shortcut - Esc cancels";
     }
-    private static readonly Color Panel = new(0.055f, 0.075f, 0.10f, 0.98f);
-    private static readonly Color Card = new(0.09f, 0.12f, 0.16f, 1f);
-    private static readonly Color Accent = new(0.38f, 0.83f, 0.74f, 1f);
+    private static readonly Color Panel = MenuTheme.Panel;
+    private static readonly Color Card = MenuTheme.Card;
+    private static readonly Color Accent = MenuTheme.Accent;
     private GUIStyle sectionStyle;
     private static void Fill(Rect rect, Color color)
     {
@@ -150,11 +153,9 @@ internal sealed class TrainerMenu
 
         noteStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, wordWrap = true };
 
-        noteStyle.normal.textColor = new Color(0.70f, 0.76f, 0.82f);
+        noteStyle.normal.textColor = MenuTheme.Detail;
 
-        sectionStyle = new GUIStyle(labelStyle) { fontStyle = FontStyle.Bold };
-
-        sectionStyle.normal.textColor = Accent;
+        sectionStyle = MenuTheme.Section(labelStyle);
     }
     private bool Button(Rect rect, string text, bool selected = false)
     {
@@ -204,50 +205,54 @@ internal sealed class TrainerMenu
 
         Matrix4x4 previousMatrix = GUI.matrix;
 
-        float scale = Math.Min(1.3f, Math.Min(Screen.width / 832f, Screen.height / 640f));
+        float scale = Math.Min(1.3f, Math.Min(Screen.width / 832f, Screen.height / 692f));
 
-        float x = (Screen.width / scale - 800f) / 2f, y = (Screen.height / scale - 608f) / 2f;
+        float x = (Screen.width / scale - 800f) / 2f, y = (Screen.height / scale - 660f) / 2f;
 
         GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one * scale);
 
         try
         {
-            Fill(new Rect(x, y, 800, 608), Panel);
+            Fill(new Rect(x, y, 800, 660), Panel);
 
-            Fill(new Rect(x, y, 4, 608), Accent);
+            Fill(new Rect(x, y, 4, 660), Accent);
 
             GUI.Label(new Rect(x + 24, y + 16, 650, 40), "Port's Trainer", titleStyle);
 
             if (Button(new Rect(x + 690, y + 20, 84, 30), "Close")) { Close(); waitForRelease = true; }
-
-            Fill(new Rect(x + 18, y + 72, 764, 166), Card);
-
-            GUI.Label(new Rect(x + 30, y + 78, 400, 25), "TRAINER ACTIONS", sectionStyle);
-
-            GUI.Label(new Rect(x + 270, y + 103, 210, 24), "Keyboard", noteStyle);
-
-            GUI.Label(new Rect(x + 520, y + 103, 230, 24), "Controller", noteStyle);
-
-            DrawRow(x, y + 133, TrainerAction.Menu);
-
-            DrawRow(x, y + 165, TrainerAction.Flight);
-
-            DrawRow(x, y + 197, TrainerAction.Teleport);
-
-            Fill(new Rect(x + 18, y + 250, 764, 265), Card);
-
-            GUI.Label(new Rect(x + 30, y + 255, 230, 25), "FLIGHT CONTROLS", sectionStyle);
-
-            int row = 0;
-
-            foreach (var action in TrainerBindings.Actions)
-
-                if (action > TrainerAction.Teleport && action != TrainerAction.TurnLeft && action != TrainerAction.TurnRight) DrawRow(x, y + 287 + row++ * 32, action);
-
-            if (message.Length > 0) GUI.Label(new Rect(x + 24, y + 523, 750, 32), message, noteStyle);
-
-            if (Button(new Rect(x + 24, y + 566, 166, 28), "Restore defaults")) { capture = null; Bindings.Reset(); Save(); }
+            if (Button(new Rect(x + 24, y + 72, 148, 36), "Movement", !vehicleSelected)) SelectTab(false);
+            if (drawVehicle != null && Button(new Rect(x + 180, y + 72, 148, 36), "Vehicle", vehicleSelected)) SelectTab(true);
+            Fill(new Rect(x + 24, y + 113, 752, 1), Card);
+            if (vehicleSelected && drawVehicle != null) drawVehicle(new Rect(x + 24, y + 130, 752, 470));
+            else DrawMovement(x, y);
+            GUI.Label(new Rect(x + 580, y + 619, 194, 24), "Insert / Esc to close", noteStyle);
         }
         finally { GUI.matrix = previousMatrix; }
+    }
+
+    private void SelectTab(bool vehicle)
+    {
+        if (vehicleSelected == vehicle) return;
+        vehicleSelected = vehicle;
+        capture = null;
+        message = "";
+    }
+
+    private void DrawMovement(float x, float y)
+    {
+        Fill(new Rect(x + 18, y + 130, 764, 134), Card);
+        GUI.Label(new Rect(x + 30, y + 138, 230, 25), "MOVEMENT ACTIONS", sectionStyle);
+        GUI.Label(new Rect(x + 270, y + 138, 210, 24), "Keyboard", noteStyle);
+        GUI.Label(new Rect(x + 520, y + 138, 230, 24), "Controller", noteStyle);
+        DrawRow(x, y + 181, TrainerAction.Flight);
+        DrawRow(x, y + 221, TrainerAction.Teleport);
+        Fill(new Rect(x + 18, y + 280, 764, 265), Card);
+        GUI.Label(new Rect(x + 30, y + 287, 230, 25), "FLIGHT CONTROLS", sectionStyle);
+        int row = 0;
+        foreach (var action in TrainerBindings.Actions)
+            if (action > TrainerAction.Teleport && action != TrainerAction.TurnLeft && action != TrainerAction.TurnRight)
+                DrawRow(x, y + 321 + row++ * 32, action);
+        if (message.Length > 0) GUI.Label(new Rect(x + 24, y + 557, 750, 42), message, noteStyle);
+        if (Button(new Rect(x + 24, y + 612, 166, 30), "Restore bindings")) { capture = null; Bindings.Reset(); Save(); }
     }
 }

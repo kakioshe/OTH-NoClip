@@ -5,6 +5,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\src\Configuration\VehiclePresets.cs" Link="VehiclePresets.cs" />
+    <Compile Include="..\src\Features\Vehicle\VehicleAssists.cs" Link="VehicleAssists.cs" />
+    <Compile Include="..\src\Features\Vehicle\SurfaceDrive.cs" Link="SurfaceDrive.cs" />
+    <Compile Include="..\src\Features\Vehicle\VehicleFlip.cs" Link="VehicleFlip.cs" />
+    <Compile Include="..\src\Configuration\VehicleValueInput.cs" Link="VehicleValueInput.cs" />
+    <Compile Include="..\src\Features\Vehicle\VehicleRepair.cs" Link="VehicleRepair.cs" />
+    <Compile Include="..\src\Features\Vehicle\VehicleControls.cs" Link="VehicleControls.cs" />
+    <Compile Include="..\src\Features\Vehicle\VehicleValueGroup.cs" Link="VehicleValueGroup.cs" />
+    <Compile Include="..\src\Features\Vehicle\VehicleProtection.cs" Link="VehicleProtection.cs" />
+    <Compile Include="..\src\Configuration\VehiclePreferenceStore.cs" Link="VehiclePreferenceStore.cs" />
+    <Compile Include="..\src\Features\Vehicle\VehicleModifierValue.cs" Link="VehicleModifierValue.cs" />
+    <Compile Include="..\src\Configuration\VehiclePreferences.cs" Link="VehiclePreferences.cs" />
     <Compile Include="..\src\Features\Flight\FlightHeading.cs" Link="FlightHeading.cs" />
     <Compile Include="..\src\Runtime\TrainerLifetime.cs" Link="TrainerLifetime.cs" />
     <Compile Include="..\src\Configuration\BindingStore.cs" Link="BindingStore.cs" />
