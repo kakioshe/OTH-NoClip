@@ -46,7 +46,7 @@ internal sealed class VehicleTuning
         controls.Update(false);
         ReleaseGearing();
         Simple = simple;
-        Status = "Tuning switched off. Review the values, then click Enable tuning.";
+        Status = "Tuning switched off. Click Tuning OFF to apply your settings.";
     }
 
     internal void RestoreStock()

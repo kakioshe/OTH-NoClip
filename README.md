@@ -55,7 +55,7 @@ The Vehicle tab includes **Repair car**. Click **Repair** to request a full repa
 
 **God mode** prevents new damage through the current local car's damage multiplier and damage handler. It leaves existing damage in place and restores the previous multiplier when disabled. Flooding and other environmental failures are outside this protection.
 
-**Vehicle tuning** has two modes, with **Simple** selected by default. Click **Enable tuning** to apply your settings, or **Disable tuning** to return to stock performance. The visible badge reads **OFF**, **ON**, **WAITING** or **PAUSED**. ON means performance values were successfully applied; changing a slider while OFF only edits your preferences. Each mode keeps its own values, and tuning starts OFF. Switching modes also turns it off. God mode, repair and assists remain independent.
+**Vehicle tuning** has two modes, with **Simple** selected by default. Use the single coloured **Tuning** toggle: grey **OFF**, green **ON**, or amber **WAITING / PAUSED**. Click it to enable or disable tuning. ON means performance values were successfully applied; changing a slider while OFF only edits your preferences. Each mode keeps its own values, and tuning starts OFF. Switching modes also turns it off. God mode, repair and assists remain independent.
 
 **Simple** offers **Top speed (1–3x), Acceleration (0.5–3x), Grip (0.5–2x), Steering (0.5–1.5x) and Braking (0.5–2x)**. A value of 1x is stock. Top speed coordinates the engine's speed ceiling and forward High gearing. Supporting power compensates for taller gearing, with the acceleration slider applied on top; there is no separate power/overdrive combination to choose. Grip, steering and braking remain independently adjustable.
 
@@ -63,7 +63,7 @@ Stop to apply a top-speed change. If the car is moving, the complete previous tu
 
 These multipliers are tuning requests, not calibrated guarantees of exact road speed or acceleration. Terrain, traction, selected gear/range and engine power still matter. The engine RPM limits and Low/reverse ratios remain stock. Start with Top speed 1.5x or 2x and Acceleration 1x. The automatic calculation and mode lifecycle have independent tests; the combined driving effect still needs gameplay validation.
 
-**Detailed** retains independently adjustable **Power, Speed limit, Grip, Steering angle, Braking strength and tuning presets**, plus a **High-gear speed boost** slider. The same **Enable tuning / Disable tuning** button controls all performance and gearing changes. The five performance numbers are editable: press Enter or click outside the field to accept a value. Invalid entries restore the previous value. Sliders move in 0.05 steps. Preferences can be edited while OFF and apply relative to the current car's legitimate baseline:
+**Detailed** retains independently adjustable **Power, Speed limit, Grip, Steering angle, Braking strength and tuning presets**, plus a **High-gear speed boost** slider. The same **Tuning** toggle controls all performance and gearing changes. Engine & speed groups Power, Speed limit and High-gear speed boost together; Handling groups Grip, Steering angle and Braking strength. Presets sit above both groups. Simple groups Top speed/Acceleration under Driving and the remaining sliders under Handling. The five performance numbers are editable: press Enter or click outside the field to accept a value. Invalid entries restore the previous value. Sliders move in 0.05 steps. Preferences can be edited while OFF and apply relative to the current car's legitimate baseline:
 
 | Setting | Range | Meaning |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ These multipliers are tuning requests, not calibrated guarantees of exact road s
 | Steering angle | 0.5–1.5x | Maximum wheel steering angle |
 | Braking strength | 0.5–2x | Service-brake torque |
 
-**Disable tuning** restores owned performance and gearing baselines while keeping slider preferences. **Restore stock** turns tuning OFF, resets both modes' preferences to 1x and immediately releases gearing changes. Both actions leave God mode and repairs independent. Performance modifiers pause during flight and resume afterward. Losing the car/session switches tuning off; enable it explicitly for the next car. Shared asset settings are refused, and unknown external writes stop the controls rather than overwriting those values.
+Switching **Tuning** off restores owned performance and gearing baselines while keeping slider preferences. **Restore stock** turns tuning OFF, resets both modes' preferences to 1x and immediately releases gearing changes. Both actions leave God mode and repairs independent. Performance modifiers pause during flight and resume afterward. Losing the car/session switches tuning off; enable it explicitly for the next car. Shared asset settings are refused, and unknown external writes stop the controls rather than overwriting those values.
 
 The existing vehicle settings were reported working in development testing. Protection coverage, upgrade rebasing and cleanup across all car/session transitions still require further runtime validation. A higher speed-limit multiplier does not guarantee that the engine/gearing can reach it or enforce a hard downhill cap. This report does not establish every grip/terrain interaction.
 
@@ -91,7 +91,7 @@ Both assist switches start off, reset on vehicle/session loss and remain indepen
 
 The gear preference lasts for this session, applies only when tuning is ON, and waits until stopped before changing the complete tune. It releases during flight, disabled input, neutral/reverse or shifting. Disabling tuning, Restore stock, vehicle/session loss or a fault releases owned changes. Unknown differential writes are preserved. No shared High/Low settings or gearbox arrays are modified.
 
-For a first test, leave Spider mode off, select Simple, set Top speed to 2x and Acceleration to 1x, stop and click Enable tuning. Confirm ON before driving. Compare speed, acceleration, Low/reverse, manual shifts and restoration. Bounded input-hook telemetry records up to 90 samples at most once per second after a gearing change in `MelonLoader/Latest.log`. Combined Simple driving and the revised UI remain runtime-unverified.
+For a first test, leave Spider mode off, select Simple, set Top speed to 2x and Acceleration to 1x, stop and click Tuning OFF. Confirm ON before driving. Compare speed, acceleration, Low/reverse, manual shifts and restoration. Bounded input-hook telemetry records up to 90 samples at most once per second after a gearing change in `MelonLoader/Latest.log`. Combined Simple driving and the revised UI remain runtime-unverified.
 
 ## Compatibility and testing
 

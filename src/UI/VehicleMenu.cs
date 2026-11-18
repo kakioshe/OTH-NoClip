@@ -15,7 +15,7 @@ internal sealed class VehicleMenu
     private readonly VehicleOverdrive overdrive;
     private readonly VehicleTuning tuning;
     private readonly Action preferencesChanged;
-    private GUIStyle label, detail, button, field, section, badge;
+    private GUIStyle label, detail, button, field, section;
     private int pinned = -1;
     private static readonly VehicleSetting[] SimpleSettings = { VehicleSetting.SpeedLimit, VehicleSetting.Power, VehicleSetting.Grip, VehicleSetting.Steering, VehicleSetting.Brakes };
     private static readonly string[] SimpleTitles = { "Top speed", "Acceleration", "Grip", "Steering", "Braking" };
@@ -80,6 +80,8 @@ internal sealed class VehicleMenu
         Fill(new Rect(area.x - 6, area.y, area.width + 12, 204), MenuTheme.Card);
         GUI.Label(new Rect(area.x + 6, area.y + 8, 230, 25), "VEHICLE ACTIONS", section);
         Fill(new Rect(area.x - 6, area.y + 216, area.width + 12, 296), MenuTheme.Card);
+        GUI.Label(new Rect(area.x + 6, area.y + (tuning.Simple ? 256 : 288), 300, 23), tuning.Simple ? "DRIVING" : "ENGINE & SPEED", section);
+        GUI.Label(new Rect(area.x + 6, area.y + (tuning.Simple ? 344 : 400), 300, 23), "HANDLING", section);
         for (int row = 0; row < Titles.Length; row++)
         {
             if (tuning.Simple && row >= 11) continue;
@@ -106,8 +108,9 @@ internal sealed class VehicleMenu
             else if (row == 3)
             {
                 DrawMode(area, top);
-                Fill(action, tuning.State == "ON" ? new Color(0.10f, 0.40f, 0.30f) : tuning.State == "OFF" ? new Color(0.25f, 0.28f, 0.31f) : new Color(0.40f, 0.30f, 0.10f));
-                GUI.Label(action, "TUNING " + tuning.State, badge);
+                Color color = tuning.State == "ON" ? new Color(0.10f, 0.48f, 0.34f) : tuning.State == "OFF" ? new Color(0.25f, 0.28f, 0.31f) : new Color(0.48f, 0.34f, 0.10f);
+                if (Button(new Rect(area.xMax - 212, top, 174, 27), "Tuning " + tuning.State, background: color))
+                { controls.Modifiers = !controls.Modifiers; actionStatus = "controls"; }
             }
             else if (row == 9 || row == 10)
             {
@@ -123,9 +126,6 @@ internal sealed class VehicleMenu
             else DrawSetting(area, top, row);
             if (Button(InfoRect(area, row), "i", pinned == row)) pinned = pinned == row ? -1 : row;
         }
-        GUI.Label(new Rect(area.x + 6, area.y + 256, area.width - 224, 27), tuning.ActivationText, detail);
-        if (Button(new Rect(area.xMax - 208, area.y + 256, 174, 27), controls.Modifiers ? "Disable tuning" : "Enable tuning", controls.Modifiers))
-        { controls.Modifiers = !controls.Modifiers; actionStatus = "controls"; }
         if (Button(new Rect(area.x, area.y + 546, 166, 30), "Restore stock"))
         {
             tuning.RestoreStock();
@@ -146,13 +146,22 @@ internal sealed class VehicleMenu
         GUI.Label(new Rect(box.x + 14, box.y + 14, box.width - 28, box.height - 28), HelpText(help), detail);
     }
 
-    private float RowTop(int row) => tuning.Simple && row >= 4 && row <= 8 ? 288 + (row - 4) * 36 : row < 3 ? 41 + row * 32 : row == 3 ? 224 :
-        row == 9 ? 137 : row == 10 ? 169 : row == 11 ? 288 : row == 12 ? 480 : 320 + (row - 4) * 32;
+    private float RowTop(int row)
+    {
+        if (row < 3) return 41 + row * 32;
+        if (row == 3) return 224;
+        if (row == 9) return 137;
+        if (row == 10) return 169;
+        if (row == 11) return 256;
+        if (row == 12) return 368;
+        if (tuning.Simple) return row < 6 ? 280 + (row - 4) * 28 : 368 + (row - 6) * 28;
+        return row < 6 ? 312 + (row - 4) * 28 : 424 + (row - 6) * 28;
+    }
     private Rect InfoRect(Rect area, int row) => new Rect(area.xMax - 34, area.y + RowTop(row), 30, 27);
 
     private string Title(int row) => row == 3 ? "VEHICLE TUNING" : tuning.Simple && row >= 4 && row <= 8 ? SimpleTitles[row - 4] : Titles[row];
     private string HelpText(int row) => row == 3 ?
-        "Simple calculates power, speed limit and gearing for you. Detailed exposes individual controls and presets. Each mode keeps its own values. Switching modes turns tuning off. Click Enable tuning to apply your settings; the status reads ON only after performance values are applied. Tuning starts OFF each session. God mode and assists are independent." :
+        "Click the Tuning button to turn your settings on or off. Grey is OFF, green is ON, amber is WAITING or PAUSED. ON means performance values were applied. Simple calculates power, speed limit and gearing; Detailed exposes individual values. Switching modes turns tuning off. God mode and assists are independent. Current state: " + tuning.ActivationText :
         tuning.Simple && row >= 4 && row <= 8 ? SimpleHelp[row - 4] : Help[row];
 
     private void DrawMode(Rect area, float top)
@@ -246,8 +255,6 @@ internal sealed class VehicleMenu
         detail = new GUIStyle(GUI.skin.label) { fontSize = 13, wordWrap = true };
         detail.normal.textColor = MenuTheme.Detail;
         field = new GUIStyle(GUI.skin.textField) { fontSize = 14, alignment = TextAnchor.MiddleCenter };
-        badge = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-        badge.normal.textColor = Color.white;
         button = new GUIStyle(GUI.skin.button) { fontSize = 14, alignment = TextAnchor.MiddleCenter };
         foreach (var state in new[] { button.normal, button.hover, button.active, button.focused })
         {
@@ -257,10 +264,10 @@ internal sealed class VehicleMenu
         button.hover.textColor = MenuTheme.Accent;
         button.active.textColor = MenuTheme.Accent;
     }
-    private bool Button(Rect rect, string text, bool selected = false)
+    private bool Button(Rect rect, string text, bool selected = false, Color? background = null)
     {
         Color previous = GUI.backgroundColor;
-        GUI.backgroundColor = selected ? new Color(0.16f, 0.42f, 0.39f) : new Color(0.17f, 0.22f, 0.28f);
+        GUI.backgroundColor = background ?? (selected ? new Color(0.16f, 0.42f, 0.39f) : new Color(0.17f, 0.22f, 0.28f));
         try { return GUI.Button(rect, text, button); }
         finally { GUI.backgroundColor = previous; }
     }
