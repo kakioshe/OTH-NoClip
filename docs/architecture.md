@@ -47,6 +47,8 @@ Add automated checks for independent behavior, including invalid values and clea
 
 ## Build and tooling
 
+`VehicleOverdrive` owns stopped selection and the session lifecycle through `IVehicleOverdriveTarget`. `OverdriveRatio` owns inverse scaling and restoration of one effective reduction, using the existing scalar ownership policy. `VehicleOverdriveHooks` releases before the local input writer, applies after it, cleans up if the writer throws, and observes vehicle teardown. `VehicleOverdriveTarget` validates the original input/controller/driveline/axle settings and isolation before modifying the effective reduction; authored High/Low settings and gearbox arrays stay unchanged. It gates on the input bus's requested gear as well as actual engagement, so a reverse request cannot inherit forward gearing while the previous gear is still engaged. Bounded telemetry confirms callbacks only when actual samples appear; registration alone is insufficient. UI selection remains separate from the five saved performance values.
+
 The .NET SDK includes C# files recursively, so new source subfolders build automatically. The test project deliberately links only game-independent files; update its explicit paths when moving or adding tested code. Coverage selects those files by filename and remains scoped to the linked policies.
 
 See the root README for build and test commands. Keep private diagnostics, generated outputs, game assemblies, saves and workspace archives outside this repository. A source reorganization should pass the existing tests and compile with the initialized loader; validate any separate diagnostic build against the new paths before using it.

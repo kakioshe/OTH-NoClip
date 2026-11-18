@@ -1,6 +1,6 @@
 # Port's Trainer
 
-A Windows single-player trainer for **over the hill**, built for MelonLoader. Version **0.8.0** adds repair, flip, vehicle tuning and presets, God mode, Water immunity and Spider mode. It includes the earlier menu, persistent keyboard/Xbox bindings, camera-relative flight, map-pin teleport and the 0.6.1 source refactor.
+A Windows single-player trainer for **over the hill**, built for MelonLoader. Version **0.8.1** adds experimental High-range overdrive alongside repair, flip, vehicle tuning and presets, God mode, Water immunity and Spider mode. It includes the earlier menu, persistent keyboard/Xbox bindings, camera-relative flight and map-pin teleport.
 
 ## Install
 
@@ -65,7 +65,7 @@ The Vehicle tab includes **Repair car**. Click **Repair** to request a full repa
 | Steering angle | 0.5–1.5x | Maximum wheel steering angle |
 | Braking strength | 0.5–2x | Service-brake torque |
 
-Unchecking Active restores owned baseline values while keeping slider preferences. **Restore stock** unchecks Active and resets the five preferences to 1x. Both actions leave God mode and repairs independent. Performance modifiers pause during flight and resume afterward. Losing the car/session switches both controls off; enable them explicitly for the next car. Shared asset settings are refused, and unknown external writes stop the controls rather than overwriting those values.
+Unchecking Active restores owned baseline values while keeping slider preferences. **Restore stock** unchecks Active, resets the five preferences to 1x and immediately releases High-range overdrive. Both actions leave God mode and repairs independent. Performance modifiers pause during flight and resume afterward. Losing the car/session switches both controls off; enable them explicitly for the next car. Shared asset settings are refused, and unknown external writes stop the controls rather than overwriting those values.
 
 The existing vehicle settings were reported working in development testing. Protection coverage, upgrade rebasing and cleanup across all car/session transitions still require further runtime validation. A higher speed-limit multiplier does not guarantee that the engine/gearing can reach it or enforce a hard downhill cap. This report does not establish every grip/terrain interaction.
 
@@ -78,6 +78,12 @@ The existing vehicle settings were reported working in development testing. Prot
 Spider mode uses wheel contacts plus short probes below and in the travel direction to attach and pitch onto nearby surfaces. It excludes trigger/water volumes and vehicle colliders. It releases when no surface is found, pauses during flight and refuses overturned roof contact. Sharp corners, narrow ledges, terrain collision geometry and approach speed can interrupt attachment. The combined revision was reported working during development testing. Every wall/ceiling transition and controller/manual reverse path has not been exhaustively verified. No persistent physics settings or shared assets are changed.
 
 Both assist switches start off, reset on vehicle/session loss and remain independent of God mode, performance modifiers and Restore stock. The independent motor policies and lifecycle have automated checks; those checks do not establish game physics or native-hook interception.
+
+**High-range overdrive** is a separate experimental control, with **1x (stock), 1.5x, 2x and 3x** buttons. Stop the car before selecting a value. It extends forward High-range gearing while retaining Low, reverse, the existing gears and normal engine RPM limits. For example, 2x divides the effective final reduction by two, allowing approximately twice the road speed per engine revolution while halving wheel torque for a given engine torque. This does not guarantee twice the attainable speed. High first gear also becomes taller; use Low for starting or climbing.
+
+Overdrive starts at 1x, is not saved and is independent of performance modifiers, Power, Speed limit and tuning presets. It releases during flight, disabled input, neutral/reverse or shifting, and resets on vehicle/session loss or a fault. **Restore stock** releases it immediately even while moving. Unknown differential writes are preserved and stop overdrive. No shared High/Low settings or gearbox arrays are modified.
+
+For a first comparison, leave Spider mode off and use the same Power and Speed limit values on the same level road. Select 1x while stopped and record High/1st and High/2nd RPM at a repeatable road speed. Stop and repeat at 1.5x, then 2x. Compare RPM at the same speed rather than assuming a top-speed gain. Check Low, reverse, manual shifts and restoration separately. Each selection records up to 90 input-hook samples, at most one per second, in `MelonLoader/Latest.log`; logs include range, requested/engaged gear, RPM, road speed, wheel angular velocity/slip and effective reduction. Native interception, physical effects and transition behavior remain runtime-unverified for 0.8.1.
 
 ## Compatibility and testing
 
@@ -111,7 +117,7 @@ dotnet run --project tests/ControllerInput.Tests.csproj --configuration Release
 
 The checks cover controller scaling, binding conflicts and persistence, legacy configuration migration, fixed menu controls, camera-heading normalization and fallback, input-block lifecycle, selective control consumption, and resource cleanup after partial initialization or failures. They run without game assemblies. The **Unit tests** GitHub Actions job also reports scoped line and branch coverage for the independent controller, binding, storage, heading, input-policy and resource-lifetime classes. Coverage does not measure the complete plugin or establish runtime integration behavior.
 
-Vehicle-development checks cover preference parsing/storage, scalar ownership and group rollback, protection ownership, repair/flip commands, numeric input validation and control lifecycles. Cases include non-compounding slider updates, unknown external writes, partial failures, vehicle loss, flight pause/resume, independent switches and cancellation. Scoped coverage includes these game-independent classes, and excludes game adapters, hooks and menus. Coverage does not establish gameplay correctness.
+Vehicle-development checks cover preference parsing/storage, scalar ownership and group rollback, protection ownership, repair/flip commands, numeric input validation and control lifecycles. Overdrive checks cover inverse ratios, range/gear gating, stopped selection, known-writer rebasing, non-compounding updates, external-write refusal, restoration and fault cleanup. Scoped coverage includes these game-independent classes, and excludes game adapters, hooks and menus. Coverage does not establish gameplay correctness.
 
 The loader entry point delegates to `TrainerRuntime`, which wires dependencies and orders frame updates. Flight and map-pin teleport are separate features using `LocalVehicleProvider` for single-player eligibility and vehicle identity. Input polling and menu presentation stay outside those features. `TrainerBindings` owns validation and serialization; `BindingStore` owns file access. Dependencies receive their logger explicitly, and `TrainerLifetime` releases resources in reverse acquisition order, including after partial initialization. Harmony callbacks use a small static bridge to their current owner; the owner removes its hooks during disposal.
 

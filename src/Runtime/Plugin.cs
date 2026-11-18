@@ -2,7 +2,7 @@ using System.IO;
 using MelonLoader;
 using MelonLoader.Utils;
 
-[assembly: MelonInfo(typeof(Plugin), "Port's Trainer", "0.8.0", "Port")]
+[assembly: MelonInfo(typeof(Plugin), "Port's Trainer", "0.8.1", "Port")]
 [assembly: MelonGame("Funselektor", "over the hill")]
 
 public sealed class Plugin : MelonMod

@@ -12,10 +12,11 @@ internal sealed class VehicleMenu
     private readonly VehicleFlip flip;
     private readonly VehicleControls controls;
     private readonly VehicleAssists assists;
+    private readonly VehicleOverdrive overdrive;
     private readonly Action preferencesChanged;
     private GUIStyle label, detail, button, field, toggle, section;
     private int pinned = -1;
-    private static readonly string[] Titles = { "Repair car", "Flip car", "God mode", "Vehicle modifiers", "Power", "Speed limit", "Grip", "Steering angle", "Braking strength", "Water immunity", "Spider mode", "Tuning presets" };
+    private static readonly string[] Titles = { "Repair car", "Flip car", "God mode", "Vehicle modifiers", "Power", "Speed limit", "Grip", "Steering angle", "Braking strength", "Water immunity", "Spider mode", "Tuning presets", "High-range overdrive" };
     private static readonly string[] Help = {
         "Repairs your current single-player car through the game's healing operation without using an item. Does not enable God mode or change performance modifiers.",
         "Turns your car upright, retains its horizontal heading, lifts it 0.75 metres and stops motion. Disable flight first. Use in open space; nearby terrain can obstruct recovery.",
@@ -28,15 +29,17 @@ internal sealed class VehicleMenu
         "Scales service-brake torque. Handbrake and brake balance are unchanged. Stopping distance also depends on grip.",
         "Experimental: prevents new engine flooding and suppresses wheel terrain resistance while your car touches water. Tire grip, brakes, water detection and drying remain active. Does not dry an already flooded engine or provide buoyancy. Starts off and resets on car/session loss.",
         "Experimental surface driving: adds its own motor, adhesion and surface alignment for slopes, walls and ceilings. Use normal driving and steering controls. Targets 36 km/h forward and 18 km/h reverse independently of tuning sliders; release throttle or use the handbrake to hold. Requires a nearby surface; releases in air and pauses during flight. Start slowly on a slope before trying walls.",
-        "Replaces and saves all five tuning values. Stock: all 1x. Trail: 2/1.5/1.5/1.1/1.5. Climb: 3/1/2/1/2. Fast: 5/5/1.5/0.75/2 (power/speed/grip/steering/brakes). Existing activation stays unchanged, so active modifiers update immediately. Presets never turn on God mode, water immunity or Spider mode. Power and speed can also be entered up to 10x."
+        "Replaces and saves all five tuning values. Stock: all 1x. Trail: 2/1.5/1.5/1.1/1.5. Climb: 3/1/2/1/2. Fast: 5/5/1.5/0.75/2 (power/speed/grip/steering/brakes). Existing activation stays unchanged, so active modifiers update immediately. Presets never turn on God mode, water immunity, Spider mode or overdrive. Power and speed can also be entered up to 10x.",
+        "Experimental taller forward High-range gearing. Stop to select 1x (stock), 1.5x, 2x or 3x. More road speed per engine revolution trades away wheel torque; attainable speed still depends on power, grip and Speed limit. Low range, reverse, gear count and engine RPM limits stay stock. Pauses during flight and shifting; resets on car/session loss. Session only, independent of presets/modifiers. Restore stock also releases overdrive. Start testing at 1.5x, then 2x."
     };
 
-    internal VehicleMenu(VehicleRepair repair, VehicleFlip flip, VehicleControls controls, VehicleAssists assists, Action preferencesChanged)
+    internal VehicleMenu(VehicleRepair repair, VehicleFlip flip, VehicleControls controls, VehicleAssists assists, VehicleOverdrive overdrive, Action preferencesChanged)
     {
         this.repair = repair;
         this.flip = flip;
         this.controls = controls;
         this.assists = assists;
+        this.overdrive = overdrive;
         this.preferencesChanged = preferencesChanged;
     }
 
@@ -62,7 +65,7 @@ internal sealed class VehicleMenu
         }
         Fill(new Rect(area.x - 6, area.y, area.width + 12, 204), MenuTheme.Card);
         GUI.Label(new Rect(area.x + 6, area.y + 8, 230, 25), "VEHICLE ACTIONS", section);
-        Fill(new Rect(area.x - 6, area.y + 216, area.width + 12, 232), MenuTheme.Card);
+        Fill(new Rect(area.x - 6, area.y + 216, area.width + 12, 264), MenuTheme.Card);
         for (int row = 0; row < Titles.Length; row++)
         {
             float top = area.y + RowTop(row);
@@ -100,20 +103,23 @@ internal sealed class VehicleMenu
                 }
             }
             else if (row == 11) DrawPresets(area, top);
+            else if (row == 12) DrawOverdrive(area, top);
             else DrawSetting(area, top, (VehicleSetting)(row - 4));
             if (Button(InfoRect(area, row), "i", pinned == row)) pinned = pinned == row ? -1 : row;
         }
-        if (Button(new Rect(area.x, area.y + 482, 166, 30), "Restore stock"))
+        if (Button(new Rect(area.x, area.y + 514, 166, 30), "Restore stock"))
         {
             controls.RestoreStock();
+            try { overdrive.Reset(); }
+            catch (Exception error) { overdrive.Fail(error.Message); }
             Array.Clear(drafts, 0, drafts.Length);
             GUI.FocusControl(""); Array.Clear(editing, 0, editing.Length); inputStatus = "";
             actionStatus = "controls";
             preferencesChanged();
         }
-        string status = inputStatus.Length > 0 ? inputStatus : actionStatus == "assists" ? assists.Status : actionStatus == "flip" ? flip.Status :
+        string status = inputStatus.Length > 0 ? inputStatus : overdrive.Status.Length > 0 ? overdrive.Status : actionStatus == "assists" ? assists.Status : actionStatus == "flip" ? flip.Status :
             actionStatus == "repair" ? repair.Status : controls.Status;
-        GUI.Label(new Rect(area.x, area.y + 452, area.width, 28), status, detail);
+        GUI.Label(new Rect(area.x, area.y + 484, area.width, 28), status, detail);
         int help = hovered >= 0 ? hovered : pinned;
         if (help < 0) return;
         Rect box = PopupRect(area, help);
@@ -124,8 +130,19 @@ internal sealed class VehicleMenu
     }
 
     private static float RowTop(int row) => row < 3 ? 41 + row * 32 : row == 3 ? 224 :
-        row == 9 ? 137 : row == 10 ? 169 : row == 11 ? 256 : 288 + (row - 4) * 32;
+        row == 9 ? 137 : row == 10 ? 169 : row == 11 ? 256 : row == 12 ? 448 : 288 + (row - 4) * 32;
     private static Rect InfoRect(Rect area, int row) => new Rect(area.xMax - 34, area.y + RowTop(row), 30, 27);
+
+    private void DrawOverdrive(Rect area, float top)
+    {
+        float[] values = { 1, 1.5f, 2, 3 };
+        for (int index = 0; index < values.Length; index++)
+        {
+            float value = values[index];
+            if (Button(new Rect(area.x + 256 + index * 110, top, 104, 27), value.ToString(CultureInfo.InvariantCulture) + "x", overdrive.Multiplier == value))
+            { overdrive.Select(value); actionStatus = "overdrive"; }
+        }
+    }
 
     private void DrawPresets(Rect area, float top)
     {

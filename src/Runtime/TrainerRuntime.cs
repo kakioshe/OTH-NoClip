@@ -14,6 +14,7 @@ internal sealed class TrainerRuntime : IDisposable
     private readonly VehicleFlip flip;
     private readonly VehicleControls vehicleControls;
     private readonly VehicleAssists vehicleAssists;
+    private readonly VehicleOverdrive overdrive;
     private readonly VehiclePreferenceStore vehicleStore;
     private bool vehiclePreferencesDirty;
     private readonly GameInputBlocker gameInput;
@@ -46,6 +47,11 @@ internal sealed class TrainerRuntime : IDisposable
             lifetime.Add(vehicleControls.Dispose);
             flight = new Flight(vehicles, pose, logger);
             lifetime.Add(flight.Stop);
+            var overdriveHooks = new VehicleOverdriveHooks(vehicles, () => flight.Active, logger);
+            lifetime.Add(overdriveHooks.Dispose);
+            overdrive = new VehicleOverdrive(overdriveHooks.Resolve, logger.LogWarning);
+            overdriveHooks.Failed = overdrive.Fail;
+            lifetime.Add(overdrive.Dispose);
             var assistHooks = new VehicleAssistHooks(vehicles, () => flight.Active, () => !input.Focused || menu == null || menu.BlocksActions, logger.LogWarning, logger.LogInfo);
             lifetime.Add(assistHooks.Dispose);
             vehicleAssists = new VehicleAssists(assistHooks.Resolve, logger.LogWarning);
@@ -53,7 +59,7 @@ internal sealed class TrainerRuntime : IDisposable
             lifetime.Add(vehicleAssists.Dispose);
             flip = new VehicleFlip(() => VehicleFlipTarget.Resolve(vehicles, () => flight.Active), logger.LogInfo);
             lifetime.Add(flip.Stop);
-            var vehicleMenu = new VehicleMenu(repair, flip, vehicleControls, vehicleAssists, () => vehiclePreferencesDirty = true);
+            var vehicleMenu = new VehicleMenu(repair, flip, vehicleControls, vehicleAssists, overdrive, () => vehiclePreferencesDirty = true);
             menu = new TrainerMenu(input, new BindingStore(bindingsPath), logger, vehicleMenu.Draw);
             lifetime.Add(menu.Close);
             teleport = new MapPinTeleport(vehicles, logger);
@@ -62,7 +68,7 @@ internal sealed class TrainerRuntime : IDisposable
             gameBindings = new GameBindingSuppression(() => GameInput.IsReady && vehicles.SessionReady,
                 () => flight.Active, () => menu.Bindings, logger);
             lifetime.Add(gameBindings.Dispose);
-            logger.LogInfo("Port's Trainer: Insert opens Movement and Vehicle controls. Default F8 flight / F9 map-pin teleport. v0.8.0.");
+            logger.LogInfo("Port's Trainer: Insert opens Movement and Vehicle controls. Default F8 flight / F9 map-pin teleport. v0.8.1.");
         }
         catch
         {
@@ -89,6 +95,7 @@ internal sealed class TrainerRuntime : IDisposable
         gameBindings.Update();
         vehicleControls.Update(flight.Active);
         vehicleAssists.Update(flight.Active);
+        overdrive.Update(flight.Active);
         if (vehiclePreferencesDirty && input.Released) SaveVehiclePreferences();
     }
 

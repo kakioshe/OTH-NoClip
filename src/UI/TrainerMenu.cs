@@ -205,17 +205,17 @@ internal sealed class TrainerMenu
 
         Matrix4x4 previousMatrix = GUI.matrix;
 
-        float scale = Math.Min(1.3f, Math.Min(Screen.width / 832f, Screen.height / 692f));
+        float scale = Math.Min(1.3f, Math.Min(Screen.width / 832f, Screen.height / 724f));
 
-        float x = (Screen.width / scale - 800f) / 2f, y = (Screen.height / scale - 660f) / 2f;
+        float x = (Screen.width / scale - 800f) / 2f, y = (Screen.height / scale - 692f) / 2f;
 
         GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one * scale);
 
         try
         {
-            Fill(new Rect(x, y, 800, 660), Panel);
+            Fill(new Rect(x, y, 800, 692), Panel);
 
-            Fill(new Rect(x, y, 4, 660), Accent);
+            Fill(new Rect(x, y, 4, 692), Accent);
 
             GUI.Label(new Rect(x + 24, y + 16, 650, 40), "Port's Trainer", titleStyle);
 
@@ -223,9 +223,9 @@ internal sealed class TrainerMenu
             if (Button(new Rect(x + 24, y + 72, 148, 36), "Movement", !vehicleSelected)) SelectTab(false);
             if (drawVehicle != null && Button(new Rect(x + 180, y + 72, 148, 36), "Vehicle", vehicleSelected)) SelectTab(true);
             Fill(new Rect(x + 24, y + 113, 752, 1), Card);
-            if (vehicleSelected && drawVehicle != null) drawVehicle(new Rect(x + 24, y + 130, 752, 470));
+            if (vehicleSelected && drawVehicle != null) drawVehicle(new Rect(x + 24, y + 130, 752, 502));
             else DrawMovement(x, y);
-            GUI.Label(new Rect(x + 580, y + 619, 194, 24), "Insert / Esc to close", noteStyle);
+            GUI.Label(new Rect(x + 580, y + 651, 194, 24), "Insert / Esc to close", noteStyle);
         }
         finally { GUI.matrix = previousMatrix; }
     }
@@ -253,6 +253,6 @@ internal sealed class TrainerMenu
             if (action > TrainerAction.Teleport && action != TrainerAction.TurnLeft && action != TrainerAction.TurnRight)
                 DrawRow(x, y + 321 + row++ * 32, action);
         if (message.Length > 0) GUI.Label(new Rect(x + 24, y + 557, 750, 42), message, noteStyle);
-        if (Button(new Rect(x + 24, y + 612, 166, 30), "Restore bindings")) { capture = null; Bindings.Reset(); Save(); }
+        if (Button(new Rect(x + 24, y + 644, 166, 30), "Restore bindings")) { capture = null; Bindings.Reset(); Save(); }
     }
 }

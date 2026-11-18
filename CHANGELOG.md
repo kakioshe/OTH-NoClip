@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.1
+
+- Add experimental High-range overdrive at 1x (stock), 1.5x, 2x and 3x, with stopped-only selection and anchored help. Taller forward High gearing trades wheel torque for road speed per engine revolution; attainable speed still depends on power and resistance.
+- Preserve Low, reverse, existing gear count/spacing and engine RPM settings. Keep overdrive session-only and independent of saved presets and performance activation. Restore stock releases it immediately.
+- Release the owned effective reduction around the local native input writer; reapply only for enabled High-forward input with a forward engaged gear and no shift. Pause during flight, reset on car/session loss or faults, validate drivetrain identity/isolation, and preserve unknown external writes.
+- Add bounded input-hook telemetry for comparing range, selected/requested/engaged gear, RPM/limiter, speed, wheel angular velocity/slip and baseline/effective reduction. Extend independent policy tests and scoped coverage.
+
+Runtime validation of the new gearing, native interception, Low/reverse behavior and restoration is pending. Automated checks and compilation do not establish gameplay behavior.
+
 ## 0.8.0
 
 This release combines all earlier menu and movement features, the 0.6.1 source refactor, and the new vehicle controls. Existing release tags are preserved.
