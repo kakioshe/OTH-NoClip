@@ -10,6 +10,8 @@ internal sealed class VehicleTuning
     private bool ownsGearing;
     private float selectedGearing = 1;
     private bool paused;
+    private VehicleTuneSnapshot customDetailed;
+    internal VehiclePreset? FactoryPreset { get; private set; }
     internal bool Pending { get; private set; }
     internal float DetailedGearing { get; private set; } = 1;
     internal bool Simple { get; private set; } = true;
@@ -30,11 +32,53 @@ internal sealed class VehicleTuning
 
     internal float Minimum(VehicleSetting setting) => Simple && setting == VehicleSetting.SpeedLimit ? 1 : 0.5f;
     internal float Maximum(VehicleSetting setting) => Simple ? SimpleVehicleTuning.Maximum(setting) : VehiclePreferences.Maximum(setting);
-    internal bool Set(VehicleSetting setting, float value) => (!Simple || SimpleVehicleTuning.Valid(setting, value)) && Preferences.Set(setting, value);
+    internal bool Set(VehicleSetting setting, float value)
+    {
+        float previous = Preferences.Get(setting);
+        if (Simple && !SimpleVehicleTuning.Valid(setting, value) || !Preferences.Set(setting, value)) return false;
+        if (value != previous) Edited();
+        return true;
+    }
+    private void Edited() { if (!Simple) FactoryPreset = null; controls.Modifiers = true; }
+    internal bool SetText(VehicleSetting setting, string text)
+    {
+        float previous = Preferences.Get(setting);
+        if (!VehicleValueInput.TryApply(Preferences, setting, text, Minimum(setting), Maximum(setting))) return false;
+        if (Preferences.Get(setting) != previous) Edited();
+        return true;
+    }
     internal bool SetGearing(float value)
     {
         if (!VehicleOverdrive.ValidMultiplier(value)) return false;
-        DetailedGearing = value;
+        if (value != DetailedGearing) { DetailedGearing = value; Edited(); }
+        return true;
+    }
+
+    internal VehicleTuneSnapshot Capture() => new(Simple, Preferences, Simple ? 1 : DetailedGearing);
+
+    internal void Recall(VehicleTuneSnapshot snapshot)
+    {
+        if (snapshot == null || snapshot.Simple != Simple) throw new ArgumentException("Preset mode does not match.", nameof(snapshot));
+        var values = snapshot.CopyPreferences();
+        foreach (VehicleSetting setting in Enum.GetValues(typeof(VehicleSetting))) Preferences.Set(setting, values.Get(setting));
+        if (!Simple) DetailedGearing = snapshot.Gearing;
+        Edited();
+    }
+
+    internal void ApplyFactoryPreset(VehiclePreset preset)
+    {
+        if (Simple) throw new InvalidOperationException("Factory presets use Detailed mode.");
+        if (FactoryPreset == null) customDetailed = Capture();
+        VehiclePresets.Apply(Preferences, preset);
+        FactoryPreset = preset;
+        controls.Modifiers = true;
+    }
+
+    internal bool RecallCustom()
+    {
+        if (FactoryPreset == null) { controls.Modifiers = true; return true; }
+        if (customDetailed == null) return false;
+        Recall(customDetailed);
         return true;
     }
 
@@ -46,7 +90,7 @@ internal sealed class VehicleTuning
         controls.Update(false);
         ReleaseGearing();
         Simple = simple;
-        Status = "Tuning switched off. Click Tuning OFF to apply your settings.";
+        Status = "Settings kept. Change a value or click Tuning OFF to apply them.";
     }
 
     internal void RestoreStock()
@@ -54,6 +98,7 @@ internal sealed class VehicleTuning
         controls.RestoreStock();
         SimplePreferences.Reset();
         DetailedGearing = 1;
+        FactoryPreset = null;
         ReleaseGearing();
     }
 

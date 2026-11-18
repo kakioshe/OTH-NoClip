@@ -2,7 +2,7 @@ using System;
 
 internal enum VehiclePreset { Stock, Trail, Climb, Fast }
 
-// Presets change saved tuning only. They never enable modifiers or other assists.
+// Value definitions only. The tuning coordinator decides activation and recall.
 internal static class VehiclePresets
 {
     internal static void Apply(VehiclePreferences preferences, VehiclePreset preset)

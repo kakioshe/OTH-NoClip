@@ -11,7 +11,7 @@ def summary(label, hits):
     return f"{label}: {covered}/{len(hits)} ({100 * covered / len(hits):.1f}%)"
 
 sections = ["Scoped trainer policy coverage (not whole-plugin coverage)"]
-for source in ("ControllerInput.cs", "TrainerBindings.cs", "GameInputBlocker.cs", "InputConsumption.cs", "FlightHeading.cs", "TrainerLifetime.cs", "BindingStore.cs", "VehicleModifierValue.cs", "VehiclePreferences.cs", "VehiclePresets.cs", "VehicleAssists.cs", "SurfaceDrive.cs", "VehicleRepair.cs", "VehicleFlip.cs", "VehicleValueInput.cs", "VehicleControls.cs", "VehicleValueGroup.cs", "VehicleProtection.cs", "VehiclePreferenceStore.cs", "VehicleOverdrive.cs", "VehicleTuning.cs"):
+for source in ("ControllerInput.cs", "TrainerBindings.cs", "GameInputBlocker.cs", "InputConsumption.cs", "FlightHeading.cs", "TrainerLifetime.cs", "BindingStore.cs", "VehicleModifierValue.cs", "VehiclePreferences.cs", "VehiclePresets.cs", "VehicleAssists.cs", "SurfaceDrive.cs", "VehicleRepair.cs", "VehicleFlip.cs", "VehicleValueInput.cs", "VehicleControls.cs", "VehicleValueGroup.cs", "VehicleProtection.cs", "VehiclePreferenceStore.cs", "VehicleOverdrive.cs", "VehicleTuning.cs", "VehicleUserPresets.cs"):
     documents = [
         classes
         for module in report.values()

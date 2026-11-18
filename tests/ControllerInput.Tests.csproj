@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\src\Configuration\VehicleUserPresets.cs" Link="VehicleUserPresets.cs" />
     <Compile Include="..\src\Features\Vehicle\VehicleTuning.cs" Link="VehicleTuning.cs" />
     <Compile Include="..\src\Features\Vehicle\VehicleOverdrive.cs" Link="VehicleOverdrive.cs" />
     <Compile Include="..\src\Configuration\VehiclePresets.cs" Link="VehiclePresets.cs" />

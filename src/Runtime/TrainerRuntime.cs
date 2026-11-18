@@ -63,6 +63,13 @@ internal sealed class TrainerRuntime : IDisposable
             }
             catch (Exception error) { logger.LogWarning("Simple vehicle preferences unavailable; using defaults: " + error.Message); }
             tuning = new VehicleTuning(vehicleControls, overdrive, simplePreferences);
+            var userPresets = new VehicleUserPresets(Path.Combine(Path.GetDirectoryName(bindingsPath), "PortsTrainer.vehicle-presets.json"));
+            try
+            {
+                userPresets.Load(out int rejected);
+                if (rejected > 0) logger.LogWarning("Ignored " + rejected + " invalid saved vehicle presets.");
+            }
+            catch (Exception error) { logger.LogWarning("Saved vehicle presets unavailable: " + error.Message); }
             var assistHooks = new VehicleAssistHooks(vehicles, () => flight.Active, () => !input.Focused || menu == null || menu.BlocksActions, logger.LogWarning, logger.LogInfo);
             lifetime.Add(assistHooks.Dispose);
             vehicleAssists = new VehicleAssists(assistHooks.Resolve, logger.LogWarning);
@@ -70,7 +77,7 @@ internal sealed class TrainerRuntime : IDisposable
             lifetime.Add(vehicleAssists.Dispose);
             flip = new VehicleFlip(() => VehicleFlipTarget.Resolve(vehicles, () => flight.Active), logger.LogInfo);
             lifetime.Add(flip.Stop);
-            var vehicleMenu = new VehicleMenu(repair, flip, vehicleControls, vehicleAssists, overdrive, tuning, () => vehiclePreferencesDirty = true);
+            var vehicleMenu = new VehicleMenu(repair, flip, vehicleControls, vehicleAssists, overdrive, tuning, userPresets, logger.LogWarning, () => vehiclePreferencesDirty = true);
             menu = new TrainerMenu(input, new BindingStore(bindingsPath), logger, vehicleMenu.Draw);
             lifetime.Add(menu.Close);
             teleport = new MapPinTeleport(vehicles, logger);
