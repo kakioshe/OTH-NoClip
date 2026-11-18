@@ -32,8 +32,19 @@ jobs:
           --include "[ControllerInput.Tests]FlightHeading"
           --include "[ControllerInput.Tests]TrainerLifetime"
           --include "[ControllerInput.Tests]BindingStore"
+          --include "[ControllerInput.Tests]VehicleModifierValue"
+          --include "[ControllerInput.Tests]VehiclePreferences"
+          --include "[ControllerInput.Tests]VehiclePresets"
+          --include "[ControllerInput.Tests]VehicleAssists"
+          --include "[ControllerInput.Tests]SurfaceDrive"
+          --include "[ControllerInput.Tests]VehicleFlip"
+          --include "[ControllerInput.Tests]VehicleValueInput"
+          --include "[ControllerInput.Tests]VehicleRepair"
+          --include "[ControllerInput.Tests]VehicleControls"
+          --include "[ControllerInput.Tests]VehicleValueGroup*"
+          --include "[ControllerInput.Tests]VehicleProtection"
+          --include "[ControllerInput.Tests]VehiclePreferenceStore"
           --include-test-assembly
           --format json --output coverage.json
       - name: Report production coverage
         run: python3 tests/report_coverage.py coverage.json
-

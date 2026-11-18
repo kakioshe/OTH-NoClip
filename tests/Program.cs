@@ -41,5 +41,45 @@ LifetimeChecks.Run((name, passed) =>
     failures++;
 });
 
+VehicleChecks.Run((name, passed) =>
+{
+    checks++;
+    if (passed) return;
+    Console.Error.WriteLine("FAIL " + name);
+    failures++;
+});
+
+RepairChecks.Run((name, passed) =>
+{
+    checks++;
+    if (passed) return;
+    Console.Error.WriteLine("FAIL " + name);
+    failures++;
+});
+
+VehicleControlChecks.Run((name, passed) =>
+{
+    checks++;
+    if (passed) return;
+    Console.Error.WriteLine("FAIL " + name);
+    failures++;
+});
+
+VehicleInteractionChecks.Run((name, passed) =>
+{
+    checks++;
+    if (passed) return;
+    Console.Error.WriteLine("FAIL " + name);
+    failures++;
+});
+
+VehicleExpansionChecks.Run((name, passed) =>
+{
+    checks++;
+    if (passed) return;
+    Console.Error.WriteLine("FAIL " + name);
+    failures++;
+});
+
 Console.WriteLine($"{checks - failures}/{checks} trainer checks passed.");
 return failures == 0 ? 0 : 1;
