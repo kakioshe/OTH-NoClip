@@ -16,6 +16,7 @@ internal sealed class VehicleControls : IDisposable
     internal VehiclePreferences Preferences { get; }
     internal bool Modifiers { get; set; }
     internal bool GodMode { get; set; }
+    internal bool PerformanceActive { get; private set; }
     internal string Status { get; private set; } = "";
 
     internal VehicleControls(VehiclePreferences preferences, Func<IVehicleControlsTarget> resolve, Action<string> report)
@@ -25,7 +26,7 @@ internal sealed class VehicleControls : IDisposable
         this.report = report;
     }
 
-    internal void Update(bool flightActive)
+    internal void Update(bool flightActive, VehiclePreferences effectivePreferences = null)
     {
         try
         {
@@ -37,8 +38,8 @@ internal sealed class VehicleControls : IDisposable
             if (!Modifiers && !GodMode) { Release(); return; }
             target ??= resolve();
             if (target == null || !target.Eligible) { Stop("Vehicle controls unavailable: an authoritative local single-player car is required."); return; }
-            if (Modifiers && !flightActive) target.Apply(Preferences);
-            else target.ReleasePerformance();
+            if (Modifiers && !flightActive) { target.Apply(effectivePreferences ?? Preferences); PerformanceActive = true; }
+            else { target.ReleasePerformance(); PerformanceActive = false; }
             target.Protect(GodMode);
             Status = Modifiers && flightActive ? "Performance modifiers paused during flight." : "";
         }
@@ -62,6 +63,7 @@ internal sealed class VehicleControls : IDisposable
 
     private void Release()
     {
+        PerformanceActive = false;
         var previous = target;
         target = null;
         previous?.Dispose();

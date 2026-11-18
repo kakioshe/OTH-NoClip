@@ -43,6 +43,12 @@ jobs:
           --include "[ControllerInput.Tests]VehicleControls"
           --include "[ControllerInput.Tests]VehicleValueGroup*"
           --include "[ControllerInput.Tests]VehicleProtection"
+          --include "[ControllerInput.Tests]VehicleOverdrive"
+          --include "[ControllerInput.Tests]OverdriveRatio"
+          --include "[ControllerInput.Tests]VehicleTuning"
+          --include "[ControllerInput.Tests]SimpleVehicleTuning"
+          --include "[ControllerInput.Tests]VehicleUserPresets*"
+          --include "[ControllerInput.Tests]VehicleTuneSnapshot"
           --include "[ControllerInput.Tests]VehiclePreferenceStore"
           --include-test-assembly
           --format json --output coverage.json

@@ -14,7 +14,10 @@ internal sealed class TrainerRuntime : IDisposable
     private readonly VehicleFlip flip;
     private readonly VehicleControls vehicleControls;
     private readonly VehicleAssists vehicleAssists;
+    private readonly VehicleOverdrive overdrive;
+    private readonly VehicleTuning tuning;
     private readonly VehiclePreferenceStore vehicleStore;
+    private readonly VehiclePreferenceStore simpleVehicleStore;
     private bool vehiclePreferencesDirty;
     private readonly GameInputBlocker gameInput;
     private readonly GameBindingSuppression gameBindings;
@@ -46,6 +49,27 @@ internal sealed class TrainerRuntime : IDisposable
             lifetime.Add(vehicleControls.Dispose);
             flight = new Flight(vehicles, pose, logger);
             lifetime.Add(flight.Stop);
+            var overdriveHooks = new VehicleOverdriveHooks(vehicles, () => flight.Active, logger);
+            lifetime.Add(overdriveHooks.Dispose);
+            overdrive = new VehicleOverdrive(overdriveHooks.Resolve, logger.LogWarning);
+            overdriveHooks.Failed = overdrive.Fail;
+            lifetime.Add(overdrive.Dispose);
+            simpleVehicleStore = new VehiclePreferenceStore(Path.Combine(Path.GetDirectoryName(bindingsPath), "PortsTrainer.simple-vehicle.cfg"));
+            var simplePreferences = new VehiclePreferences();
+            try
+            {
+                simplePreferences = simpleVehicleStore.Load(out int rejected);
+                if (rejected > 0) logger.LogWarning("Ignored " + rejected + " invalid simple vehicle preferences.");
+            }
+            catch (Exception error) { logger.LogWarning("Simple vehicle preferences unavailable; using defaults: " + error.Message); }
+            tuning = new VehicleTuning(vehicleControls, overdrive, simplePreferences);
+            var userPresets = new VehicleUserPresets(Path.Combine(Path.GetDirectoryName(bindingsPath), "PortsTrainer.vehicle-presets.json"));
+            try
+            {
+                userPresets.Load(out int rejected);
+                if (rejected > 0) logger.LogWarning("Ignored " + rejected + " invalid saved vehicle presets.");
+            }
+            catch (Exception error) { logger.LogWarning("Saved vehicle presets unavailable: " + error.Message); }
             var assistHooks = new VehicleAssistHooks(vehicles, () => flight.Active, () => !input.Focused || menu == null || menu.BlocksActions, logger.LogWarning, logger.LogInfo);
             lifetime.Add(assistHooks.Dispose);
             vehicleAssists = new VehicleAssists(assistHooks.Resolve, logger.LogWarning);
@@ -53,7 +77,7 @@ internal sealed class TrainerRuntime : IDisposable
             lifetime.Add(vehicleAssists.Dispose);
             flip = new VehicleFlip(() => VehicleFlipTarget.Resolve(vehicles, () => flight.Active), logger.LogInfo);
             lifetime.Add(flip.Stop);
-            var vehicleMenu = new VehicleMenu(repair, flip, vehicleControls, vehicleAssists, () => vehiclePreferencesDirty = true);
+            var vehicleMenu = new VehicleMenu(repair, flip, vehicleControls, vehicleAssists, overdrive, tuning, userPresets, logger.LogWarning, () => vehiclePreferencesDirty = true);
             menu = new TrainerMenu(input, new BindingStore(bindingsPath), logger, vehicleMenu.Draw);
             lifetime.Add(menu.Close);
             teleport = new MapPinTeleport(vehicles, logger);
@@ -62,7 +86,7 @@ internal sealed class TrainerRuntime : IDisposable
             gameBindings = new GameBindingSuppression(() => GameInput.IsReady && vehicles.SessionReady,
                 () => flight.Active, () => menu.Bindings, logger);
             lifetime.Add(gameBindings.Dispose);
-            logger.LogInfo("Port's Trainer: Insert opens Movement and Vehicle controls. Default F8 flight / F9 map-pin teleport. v0.8.0.");
+            logger.LogInfo("Port's Trainer: Insert opens Movement and Vehicle controls. Default F8 flight / F9 map-pin teleport. v0.8.1.");
         }
         catch
         {
@@ -87,7 +111,7 @@ internal sealed class TrainerRuntime : IDisposable
         }
         gameInput.Update(menu.Visible, input.Released);
         gameBindings.Update();
-        vehicleControls.Update(flight.Active);
+        tuning.Update(flight.Active);
         vehicleAssists.Update(flight.Active);
         if (vehiclePreferencesDirty && input.Released) SaveVehiclePreferences();
     }
@@ -120,6 +144,8 @@ internal sealed class TrainerRuntime : IDisposable
         vehiclePreferencesDirty = false;
         try { vehicleStore.Save(vehicleControls.Preferences); }
         catch (Exception error) { vehicleSaveWarning?.Invoke("Vehicle preferences work this session but could not be saved: " + error.Message); }
+        try { simpleVehicleStore.Save(tuning.SimplePreferences); }
+        catch (Exception error) { vehicleSaveWarning?.Invoke("Simple vehicle preferences work this session but could not be saved: " + error.Message); }
     }
 
     private readonly Action<string> vehicleSaveWarning;

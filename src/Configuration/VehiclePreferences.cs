@@ -27,6 +27,13 @@ internal sealed class VehiclePreferences
         for (int i = 0; i < values.Length; i++) values[i] = 1;
     }
 
+    internal VehiclePreferences Copy()
+    {
+        var result = new VehiclePreferences();
+        Array.Copy(values, result.values, values.Length);
+        return result;
+    }
+
     internal string Serialize()
     {
         var text = new StringBuilder();

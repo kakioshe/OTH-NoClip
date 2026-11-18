@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.1
+
+- Add three persistent saved preset slots per mode, including Detailed's high-gear speed boost. Save/Load never stores protection or assist activation. Preserve the previous preset file as a backup, validate stored snapshots and keep saved slots intact after failed writes.
+- Add Custom recall before built-in preset previews, retain it across mode switches, and commit pending valid numeric edits before mode/preset/save actions.
+- Automatically request tuning ON after changed valid values or preset choices/loads. Keep manual OFF, startup/mode-switch OFF and stopped-only speed/gearing application.
+- Add Simple and Detailed tuning modes, with Simple selected by default. Simple exposes Top speed, Acceleration, Grip, Steering and Braking, calculating the speed ceiling, forward gearing and compensating power together.
+- Keep independently adjustable original settings and presets in Detailed. Save both profiles independently without activation. Mode changes switch tuning off; Restore stock resets both profiles. Speed/gearing edits wait until stopped, retaining the complete previous tune until then.
+- Add one coloured Tuning toggle: grey OFF, green ON, amber WAITING/PAUSED. Group engine/speed controls together and handling controls together, with Detailed presets above the groups. ON reflects successfully applied performance values, rather than merely a requested switch. Disabling releases performance and gearing changes in both modes.
+- Expose experimental gearing in Detailed as a High-gear speed boost slider from 1x to 3x, with plain-language help. Taller forward High gearing trades wheel torque for road speed per engine revolution; attainable speed still depends on power and resistance.
+- Preserve Low, reverse, existing gear count/spacing and engine RPM settings. The detailed gear preference is session-only unless explicitly saved in a user preset. Restore stock releases it immediately and retains saved presets.
+- Release the owned effective reduction around the local native input writer; reapply only for enabled High-forward input with a forward engaged gear and no shift. Pause during flight, reset on car/session loss or faults, validate drivetrain identity/isolation, and preserve unknown external writes.
+- Add bounded input-hook telemetry for comparing range, selected/requested/engaged gear, RPM/limiter, speed, wheel angular velocity/slip and baseline/effective reduction. Extend independent policy tests and scoped coverage.
+
+Development logs confirm the earlier overdrive-only candidate loaded and intercepted the input writer, applied 8-to-4 High reduction at 2x and retained stock reduction during shifts. The same drive held near 27 km/h with a 7.5 m/s speed-control setting, consistent with the speed limiter holding it below redline. Simple now coordinates that ceiling with gearing. Combined Simple driving, new mode rendering, Low/reverse and full restoration remain runtime-unverified. Automated checks and compilation do not establish gameplay behavior.
+
 ## 0.8.0
 
 This release combines all earlier menu and movement features, the 0.6.1 source refactor, and the new vehicle controls. Existing release tags are preserved.
